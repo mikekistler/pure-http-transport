@@ -1,6 +1,10 @@
-@PureHttpMcpServer_HostAddress = http://localhost:5168
+@HostAddress = http://localhost:5168
 
-GET {{PureHttpMcpServer_HostAddress}}/weatherforecast/
+GET {{HostAddress}}/openapi/v1.json
+
+###
+
+GET {{HostAddress}}/tools/
 Accept: application/json
 
 ###
