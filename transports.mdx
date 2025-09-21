@@ -299,7 +299,7 @@ client-to-server and server-to-client MCP requests and notifications.
 Clients send requests and notifications to servers with HTTP GET or POST requests.
 Servers send replies to client requests in the response of the HTTP request.
 Clients accept requests and notifications from servers in the response to GET requests
-on endpoints specific to the type of request or notification.
+on endpoints specific to requests or notifications.
 Clients send replies to server requests with an HTTP POST to an endpoint specific to the
 type of request received from the server.
 
@@ -346,69 +346,95 @@ The following table provides a complete mapping from MCP message to HTTP Method 
 
 <!-- jq -r '.. | objects | if .properties.method.const then .properties.method.const else empty end' schema/2025-06-18/schema.json | sort -->
 
-| MCP message              | HTTP Method | HTTP Path | Request Body | Response |
-| ------------------------ | ----------- | --------- | ------------ | -------- |
-| **Requests**             | | | | |
-| completion/complete      | POST | /completions | CompleteRequest.params | 200: CompleteResult |
-| initialize               | POST | /initialize | InitializeRequest.params | 200: InitializeResult |
-| logging/setLevel         | POST | /logging/setLevel | SetLevelRequest.params | 202: Accepted |
-| ping                     | GET  | /ping |    | 202: Accepted |
+| MCP message              | HTTP Method | HTTP Path |
+| ------------------------ | ----------- | --------- |
+| **Requests**             | | |
+| completion/complete      | POST | /completions |
+| initialize               | POST | /initialize |
+| logging/setLevel         | POST | /logLevel |
+| ping                     | GET  | /ping |
 <!-- ---------------- -->
-| prompts/get              | POST | /prompts/{name} | GetPromptRequest.params | 200: GetPromptResult |
-| prompts/list             | GET  | /prompts |  | 200: ListPromptsResult |
+| prompts/get              | POST | /prompts/{name} |
+| prompts/list             | GET  | /prompts |
 <!-- ---------------- -->
-| resources/list           | GET  | /resources |  | 200: ListResourcesResult |
-| resources/read           | POST | /resources | ReadResourceRequest.params | 200: ReadResourceResult |
-| resources/subscribe      | POST | /resources/subscribe | SubscribeRequest.params | 202: Accepted |
-| resources/templates/list | GET  | /resources/templates |   | 200: ListResourceTemplatesResult |
-| resources/unsubscribe    | POST | /resources/unsubscribe | UnsubscribeRequest.params | 202: Accepted |
+| resources/list           | GET  | /resources |
+| resources/read           | POST | /resources |
+| resources/subscribe      | POST | /resources/subscribe |
+| resources/templates/list | GET  | /resources/templates |
+| resources/unsubscribe    | POST | /resources/unsubscribe |
 <!-- ---------------- -->
-| tools/call               | PUT  | /tools/{name}/calls/{guid} | CallToolRequest.params | 200: CallToolResult |
-| tools/list               | GET  | /tools |   | 200: ListToolsResult |
+| tools/list               | GET  | /tools |
+| tools/call               | PUT  | /tools/{name}/calls/{guid} |
 <!-- ---------------- -->
-| **Notifications**        | | | | |
-| notifications/cancelled          | POST | /notifications | CancelledNotification | 202: Accepted |
-| notifications/initialized        | POST | /notifications | InitializedNotification | 202: Accepted |
-| notifications/progress           | POST | /notifications | ProgressNotification | 202: Accepted |
-| notifications/roots/list_changed | POST | /notifications | RootsListChangedNotification | 202: Accepted |
-| **Responses**            | | | | |
-| elicit/request           | POST | /elicit | ElicitResult | 202: Accepted |
-| ping                     | POST | /ping | no body | 202: Accepted |
-| roots/list               | POST | /roots | ListRootsResult | 202: Accepted |
-| sampling/createMessage   | POST | /sampling | CreateMessageResult | 202: Accepted |
+| **Notifications**        | | |
+| notifications/cancelled          | POST | /notifications |
+| notifications/initialized        | POST | /notifications |
+| notifications/progress           | POST | /notifications |
+| notifications/roots/list_changed | POST | /notifications |
+| **Responses**            | | |
+| elicit/request           | POST | /responses |
+| ping                     | POST | /responses |
+| roots/list               | POST | /responses |
+| sampling/createMessage   | POST | /responses |
 
 ### Sending Messages from Server to Client
 
-Each request or notification message sent from client to server:
+The server sends requests and notifications to the client in the response to HTTP GET requests
+issued to the "/requests" and "/notifications" endpoints, respectively.
 
-1. **MUST** be the response of an HTTP GET request to the method and path specified in the table below.
-2. The server **MUST** include the `MCP-Protocol-Version: <protocol-version>` header in the HTTP response to
-specify the protocol version of the message and any response to the message.
-2. For request messages, the body of the response **MUST** be the corresponding "Request" structure,
-specified in the table below.
-3. For notification messages, the body of the response **MUST** be the corresponding "Notification" structure.
-4. The Content-type of the GET response for any request or notification messages **MUST** be `application/json`.
+1. The server **MUST** implement a GET method on the "/requests" and "/notifications" endpoints to
+send requests and notifications to the client.
+2. The response body of the GET on "/requests" **MUST** be an array of "ServerRequest" messages (which may be empty).
+3. The response body of the GET on "/notifications" **MUST** be an array of "ServerNotification" messages (which may be empty).
+4. The response to a GET response for on "/requests" or "/notifications":
+  - **MUST** have "Content-Type" of `application/json`
+  - **MUST** include the `MCP-Protocol-Version: <protocol-version>` header to specify the protocol version of the message and any response to the message.
 
-The following table provides a complete mapping from MCP message to HTTP Path for server to client messages:
+#### The "/requests" endpoint
 
-| MCP message            | HTTP Path | Response | Notes |
-| ---------------------- | --------- | -------- | ----- |
-| **Requests**           | | | |
-| elicit/request         | /requests | ElicitRequest | ID sent in response header |
-| ping                   | /requests | PingRequest | ID sent in response header |
-| roots/list             | /requests | ListRootsRequest | ID sent in response header |
-| sampling/createMessage | /requests | CreateMessageRequest | ID sent in response header |
-<!-- ---------------- -->
-| **Notifications**      | | | |
-| notifications/cancelled              | /notifications | CancelledNotification |  |
-| notifications/message                | /notifications | LoggingMessageNotification |  |
-| notifications/progress               | /notifications | ProgressNotification | |
-| notifications/prompts/list_changed   | /notifications | PromptListChangedNotification |  |
-| notifications/resources/list_changed | /notifications | ResourceListChangedNotification |  |
-| notifications/resources/updated      | /notifications | ResourceUpdatedNotification |  |
-| notifications/tools/list_changed     | /notifications | ToolsListChangedNotification | |
+When the server wishes to send a request to the client, it should add it to a collection of server-to-client requests and mark it "active". When the client issues a GET request to "/requests", the server should respond with all "active" messages and then mark these messages "pending". This will prevent these messages from being immediately redelivered to the client on a subsequent GET to "/requests". When the server receives a response from the client to a pending request, it should be marked "complete" and is then eligible for garbage collection.
 
-The server **MUST** implement all the endpoints specified in this table.
+Periodically the server should scan the set of "pending" requests and reset their state to "active"
+
+Periodically the server should mark requests that have been "pending" for longer than some timeout period back to "active" so that the request is redelivered to the client. Clients should implement logic to avoid duplicate processing of a retried request.
+
+#### The "/notifications" endpoint
+
+Because a GET method cannot alter the state of the server, a mechanism is needed for managing the lifecycle of notifications
+from the server to the client. This is done by tracking groups of notification messages returned by a GET request to "/notifications" and allowing the client to acknowledge these messages on a subsequent POST to "/notifications".
+
+1. Each response to a GET request on "/notifications" **SHOULD** include an "Mcp-Message-Group" header with a globally unique value. This header **MAY** be omitted if the GET returns an empty array.
+2. When receiving the response of a GET request on "/notifications" that contains an "Mcp-Message-Group" header, the client **SHOULD** send a POST to the server's "/notifications" endpoint with an "Mcp-Message-Group" request header with the same value when all the notifications in the group have been delivered to the MCP Host.
+  - A POST to "/notifications" with a "Mcp-Message-Group" request header may also contain notifications to be delivered to
+    the server in the request body.
+
+### Summary of server endpoints
+
+The following table summarizes the endpoints provided by the MCP Server using the Pure HTTP Transport.
+
+<!-- jq -r '.. | objects | if .properties.method.const then .properties.method.const else empty end' schema/2025-06-18/schema.json | sort -->
+
+| HTTP Path            | Method | related MCP message   | Request Body | Response |
+| -------------------- | ------ | --------------------- | ------------ | -------- |
+| /completions         | POST   | completion/complete   | CompleteRequest.params (*) | 200: CompleteResult |
+| /initialize          | POST   | initialize            | InitializeRequest.params (*) | 200: InitializeResult |
+| /logLevel            | POST   | logging/setLevel      | SetLevelRequest.params (*) | 202: Accepted |
+| /notifications       | GET    | notifications/* (to client) |  | 200: [ServerNotification] |
+| /notifications       | POST   | notifications/* (to server) | [ClientNotification] | 202: Accepted |
+| /ping                | GET    | ping (from client)    |  | 202: Accepted |
+| /prompts             | GET    | prompts/list          |  | 200: ListPromptsResult |
+| /prompts/{name}      | POST   | prompts/get           | GetPromptRequest.params (*) | 200: GetPromptResult |
+| /requests            | GET    | _multiple_            |  | 200: [ServerRequest] |
+| /resources           | GET    | resources/list        |  | 200: ListResourcesResult |
+| /resources           | POST   | resources/read        | ReadResourceRequest.params (*) | 200: ReadResourceResult |
+| /resources/subscribe | POST   | resources/subscribe   | SubscribeRequest.params (*) | 202: Accepted |
+| /resources/templates | GET    | resources/templates/list |   | 200: ListResourceTemplatesResult |
+| /resources/unsubscribe | POST | resources/unsubscribe | UnsubscribeRequest.params (*) | 202: Accepted |
+| /responses           | POST   | _multiple_            | [ClientResult] | 202: Accepted |
+| /tools               | GET    | tools/list            |   | 200: ListToolsResult |
+| /tools/{name}/calls/{guid} | PUT | tools/call         | CallToolRequest.params (*) | 200: CallToolResult |
+
+(*): Includes the "_meta" property of "JSONRPCRequest".
 
 ### Session Management
 
