@@ -291,7 +291,7 @@ protocol version 2024-11-05) as follows:
 
 In the **Pure HTTP** transport, the server operates as an independent process that
 can handle multiple client connections. This transport uses conventional HTTP requests.
-The Pure HTTP Transport supports bidirectional message exchange and all current
+The Pure HTTP transport supports bidirectional message exchange and all current
 client-to-server and server-to-client MCP requests and notifications.
 
 ### Supporting bidirectional message exchange
@@ -331,10 +331,11 @@ specify the protocol version of the message and any response to the message.
 specified in the table below, including the "_meta" property of "JSONRPCRequest".
 3. For request messages using GET, the "params" of the corresponding "Request" structure including the "_meta" property of "JSONRPCRequest",
 **MUST** be sent in headers, except the "cursor" parameter of "*/list" messages, which **MUST** be sent in the query string.
+3. The client **SHOULD** include an `Mcp-Request-Id` request header with a globally unique identifier for request messages, to support cancellation.
 4. For notification messages, the body of the HTTP request **MUST** be the corresponding "Notification" structure,
 specified in the table below.
 5. For response messages, the body of the HTTP request **MUST** be the corresponding "Result" structure.
-The ID of the request **MUST** be sent in the MCP-Request-ID request header.
+The ID of the request **MUST** be sent in the `Mcp-Request-Id` request header.
 6. The server **MUST** send the result of request messages from client in the response of the HTTP request.
 The body of the response **MUST** be the corresponding "Result" structure.
 7. The Content-type of the response to client requests should be `application/json`, except for a "resource/read" that returns binary content.
@@ -384,33 +385,33 @@ issued to the "/requests" and "/notifications" endpoints, respectively.
 
 1. The server **MUST** implement a GET method on the "/requests" and "/notifications" endpoints to
 send requests and notifications to the client.
-2. The response body of the GET on "/requests" **MUST** be an array of "ServerRequest" messages (which may be empty).
+2. The response of the GET on "/requests" **MUST** be a 200 with a "ServerRequest" body or 204: NoContent.
+A 200 response also must include an Mcp-Request-Id response header with a globally unique identifier for the request.
 3. The response body of the GET on "/notifications" **MUST** be an array of "ServerNotification" messages (which may be empty).
-4. The response to a GET response for on "/requests" or "/notifications":
+4. The response to a GET on "/requests" or "/notifications":
   - **MUST** have "Content-Type" of `application/json`
   - **MUST** include the `MCP-Protocol-Version: <protocol-version>` header to specify the protocol version of the message and any response to the message.
 
 #### The "/requests" endpoint
 
-When the server wishes to send a request to the client, it should add it to a collection of server-to-client requests and mark it "active". When the client issues a GET request to "/requests", the server should respond with all "active" messages and then mark these messages "pending". This will prevent these messages from being immediately redelivered to the client on a subsequent GET to "/requests". When the server receives a response from the client to a pending request, it should be marked "complete" and is then eligible for garbage collection.
+When the server wishes to send a request to the client, it should add it to a collection of server-to-client requests and mark it "active". When the client issues a GET request to "/requests", the server should respond with the "oldest" "active" messages and then mark this message as "pending". This will prevent the same message from being immediately redelivered to the client on a subsequent GET to "/requests". When the server receives a response from the client to a pending request, it should be marked "complete" and is then eligible for garbage collection.
 
-Periodically the server should scan the set of "pending" requests and reset their state to "active"
-
-Periodically the server should mark requests that have been "pending" for longer than some timeout period back to "active" so that the request is redelivered to the client. Clients should implement logic to avoid duplicate processing of a retried request.
+Periodically the server should mark requests that have been "pending" for longer than some timeout period as "active" so that the request is redelivered to the client. Clients should implement logic to avoid duplicate processing of a retried request.
 
 #### The "/notifications" endpoint
 
 Because a GET method cannot alter the state of the server, a mechanism is needed for managing the lifecycle of notifications
 from the server to the client. This is done by tracking groups of notification messages returned by a GET request to "/notifications" and allowing the client to acknowledge these messages on a subsequent POST to "/notifications".
 
-1. Each response to a GET request on "/notifications" **SHOULD** include an "Mcp-Message-Group" header with a globally unique value. This header **MAY** be omitted if the GET returns an empty array.
+1. Each response to a GET request on "/notifications" **SHOULD** include an "Mcp-Message-Group" header with a globally unique value.
+This header **MAY** be omitted if the GET returns an empty array.
 2. When receiving the response of a GET request on "/notifications" that contains an "Mcp-Message-Group" header, the client **SHOULD** send a POST to the server's "/notifications" endpoint with an "Mcp-Message-Group" request header with the same value when all the notifications in the group have been delivered to the MCP Host.
   - A POST to "/notifications" with a "Mcp-Message-Group" request header may also contain notifications to be delivered to
     the server in the request body.
 
 ### Summary of server endpoints
 
-The following table summarizes the endpoints provided by the MCP Server using the Pure HTTP Transport.
+The following table summarizes the endpoints provided by the MCP Server using the Pure HTTP transport.
 
 <!-- jq -r '.. | objects | if .properties.method.const then .properties.method.const else empty end' schema/2025-06-18/schema.json | sort -->
 
@@ -424,7 +425,7 @@ The following table summarizes the endpoints provided by the MCP Server using th
 | /ping                | GET    | ping (from client)    |  | 202: Accepted |
 | /prompts             | GET    | prompts/list          |  | 200: ListPromptsResult |
 | /prompts/{name}      | POST   | prompts/get           | GetPromptRequest.params (*) | 200: GetPromptResult |
-| /requests            | GET    | _multiple_            |  | 200: [ServerRequest] |
+| /requests            | GET    | _multiple_            |  | 200: ServerRequest |
 | /resources           | GET    | resources/list        |  | 200: ListResourcesResult |
 | /resources           | POST   | resources/read        | ReadResourceRequest.params (*) | 200: ReadResourceResult |
 | /resources/subscribe | POST   | resources/subscribe   | SubscribeRequest.params (*) | 202: Accepted |
@@ -435,6 +436,26 @@ The following table summarizes the endpoints provided by the MCP Server using th
 | /tools/{name}/calls/{guid} | PUT | tools/call         | CallToolRequest.params (*) | 200: CallToolResult |
 
 (*): Includes the "_meta" property of "JSONRPCRequest".
+
+### Cancellation
+
+The Pure HTTP transport supports cancellation as required in the base architecture. But rather than use the JSON RPC message
+id to identify the request to be cancelled, the Pure HTTP transport uses a globally unique `Mcp-Request-Id` value
+passed in an HTTP header along with the request.
+
+Clients that control the assignment of JSON RPC message IDs **SHOULD** (for simplicity) assign globally unique IDs
+and then simply use the same value for `Mcp-Request-Id`. Clients that do not control assignment of JSON RPC message IDs,
+or that choose not to assign globally unique IDs, **SHOULD** maintain a mapping of JSON RPC message ID to `Mcp-Request-Id`
+to support request cancellation.
+
+Servers **SHOULD** assign globally unique JSON RPC message IDs to their requests and use the same value for `Mcp-Request-Id`.
+
+### HTTP Cookies
+
+The HTTP standard allows servers to request that clients store server state (cookies) and include this state
+in subsequent requests.
+
+Clients **MUST** store and return HTTP cookies set by the server, as described in the HTTP standard.
 
 ### Session Management
 
