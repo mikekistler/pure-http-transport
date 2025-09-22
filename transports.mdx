@@ -354,19 +354,15 @@ The following table provides a complete mapping from MCP message to HTTP Method 
 | initialize               | POST | /initialize |
 | logging/setLevel         | POST | /logLevel |
 | ping                     | GET  | /ping |
-<!-- ---------------- -->
 | prompts/get              | POST | /prompts/{name} |
 | prompts/list             | GET  | /prompts |
-<!-- ---------------- -->
 | resources/list           | GET  | /resources |
 | resources/read           | POST | /resources |
 | resources/subscribe      | POST | /resources/subscribe |
 | resources/templates/list | GET  | /resources/templates |
 | resources/unsubscribe    | POST | /resources/unsubscribe |
-<!-- ---------------- -->
 | tools/list               | GET  | /tools |
 | tools/call               | PUT  | /tools/{name}/calls/{guid} |
-<!-- ---------------- -->
 | **Notifications**        | | |
 | notifications/cancelled          | POST | /notifications |
 | notifications/initialized        | POST | /notifications |
