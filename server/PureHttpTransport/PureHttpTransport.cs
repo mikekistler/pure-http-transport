@@ -11,6 +11,14 @@ public static class PureHttpTransport
         // app.MapControllers();
         // app.MapGet("/api/endpoint", handler);
 
+        app.MapCompletionsEndpoints();
+        app.MapInitializeEndpoint();
+        app.MapLogLevelEndpoints();
+        app.MapNotificationsEndpoints();
+        app.MapPingEndpoint();
+        app.MapPromptsEndpoints();
+        app.MapRequestsEndpoints();
+        app.MapResourcesEndpoints();
         app.MapToolsEndpoints();
 
         return app;
