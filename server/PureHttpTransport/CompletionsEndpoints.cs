@@ -1,8 +1,7 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using ModelContextProtocol.Protocol;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.HttpResults;
+using System.ComponentModel;
 
 namespace PureHttpTransport;
 
@@ -11,27 +10,25 @@ public static class CompletionsEndpoints
     public static IEndpointRouteBuilder MapCompletionsEndpoints(this IEndpointRouteBuilder app)
     {
         // POST /completions - client requests a completion from the server
-        app.MapPost("/completions", async (HttpRequest req, HttpResponse res, object? body) =>
+        app.MapPost("/completions", Results<Ok<CompleteResult>, BadRequest<string>> (
+            [Description("The completion request parameters")]
+            [FromBody] CompleteRequestParams body) =>
         {
             if (body == null)
             {
-                res.StatusCode = StatusCodes.Status400BadRequest;
-                await res.WriteAsync("Missing request body");
-                return Results.StatusCode(StatusCodes.Status400BadRequest);
+                return TypedResults.BadRequest("Missing request body");
             }
 
-            // Very small demo completion result
-            var result = new
+            var result = new CompleteResult
             {
-                id = Guid.NewGuid().ToString(),
-                model = "demo-model",
-                choices = new[] {
-                    new { text = "Hello world", index = 0 }
-                },
-                usage = new { prompt_tokens = 0, completion_tokens = 2, total_tokens = 2 }
+                Completion = new Completion
+                {
+                    Values = new List<string> { "Value1", "Value2", "Value3" },
+                    Total = 3
+                }
             };
 
-            return Results.Ok(result);
+            return TypedResults.Ok<CompleteResult>(result);
         })
         .WithName("CreateCompletion")
         .WithSummary("Create a completion (demo implementation)");

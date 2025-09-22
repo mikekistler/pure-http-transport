@@ -1,9 +1,16 @@
 using PureHttpTransport;
+using PureHttpTransport.OpenApiExtensions;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddRequestIdTransformer();
+});
 
 var app = builder.Build();
 
@@ -15,6 +22,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseStatusCodePages();
+
 app.UsePureHttpTransport();
 
 app.Run();
+
+public partial class Program { }
