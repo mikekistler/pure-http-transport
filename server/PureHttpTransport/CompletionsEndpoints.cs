@@ -12,7 +12,11 @@ public static class CompletionsEndpoints
         // POST /completions - client requests a completion from the server
         app.MapPost("/completions", Results<Ok<CompleteResult>, BadRequest<string>> (
             [Description("The completion request parameters")]
-            [FromBody] CompleteRequestParams body) =>
+            [FromBody] CompleteRequestParams body,
+
+            [Description("The unique request ID for tracking purposes")]
+            [FromHeader(Name = "Mcp-Request-Id")] string? mcpRequestId
+        ) =>
         {
             if (body == null)
             {

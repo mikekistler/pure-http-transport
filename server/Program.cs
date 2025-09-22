@@ -9,7 +9,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddOpenApi(options =>
 {
-    options.AddRequestIdTransformer();
+    // options.AddRequestIdTransformer();
 });
 
 var app = builder.Build();

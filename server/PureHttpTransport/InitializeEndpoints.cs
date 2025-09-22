@@ -1,8 +1,6 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using PureHttpTransport.Models;
-using System;
-using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport;
 
@@ -12,21 +10,23 @@ public static class InitializeEndpoints
     {
         app.MapPost("/initialize", (InitializeRequestParams? initParams, HttpResponse response) =>
         {
-            // Create a session id for the client
-            var sessionId = Guid.NewGuid().ToString();
-            response.Headers["Mcp-Session-Id"] = sessionId;
             // Advertise the protocol version we support
             response.Headers["MCP-Protocol-Version"] = "2025-06-18";
 
-            var result = new InitializeResult
+            InitializeResult result = new InitializeResult
             {
-                _meta = new Dictionary<string, object>(),
-                Capabilities = new Dictionary<string, object>
+                Meta = new JsonObject
                 {
-                    { "tools", new Dictionary<string, object>() },
-                    { "prompts", new Dictionary<string, object> { { "listChanged", false } } },
-                    { "resources", new Dictionary<string, object> { { "listChanged", false }, { "subscribe", false } } }
+                    ["exampleKey"] = "exampleValue"
                 },
+                Capabilities = JsonSerializer.Deserialize<ServerCapabilities>(
+                    JsonSerializer.Serialize(new Dictionary<string, object>
+                    {
+                        { "tools", new Dictionary<string, object>() },
+                        { "prompts", new Dictionary<string, object> { { "listChanged", false } } },
+                        { "resources", new Dictionary<string, object> { { "listChanged", false }, { "subscribe", false } } }
+                    })
+                ) ?? new ServerCapabilities(),
                 ProtocolVersion = "2025-06-18",
                 ServerInfo = new Implementation
                 {
@@ -37,7 +37,7 @@ public static class InitializeEndpoints
                 Instructions = "This is a test Pure HTTP MCP server implementation."
             };
 
-            return Results.Json(result);
+            return TypedResults.Ok<InitializeResult>(result);
         })
         .WithName("Initialize")
         .WithSummary("Initialize the MCP session and return server capabilities");
