@@ -437,7 +437,8 @@ The following table summarizes the endpoints provided by the MCP Server using th
 
 The Pure HTTP transport supports cancellation as required in the base architecture. But rather than use the JSON RPC message
 id to identify the request to be cancelled, the Pure HTTP transport uses a globally unique `Mcp-Request-Id` value
-passed in an HTTP header along with the request.
+passed in an HTTP header along with the request. A cancellation request (from either client or server) should specify
+the `Mcp-Request-Id` in the `requestId` of the `CancelledNotification`.
 
 Clients that control the assignment of JSON RPC message IDs **SHOULD** (for simplicity) assign globally unique IDs
 and then simply use the same value for `Mcp-Request-Id`. Clients that do not control assignment of JSON RPC message IDs,
