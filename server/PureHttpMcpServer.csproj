@@ -10,4 +10,9 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.7" />
   </ItemGroup>
 
+  <!-- Exclude test source files from the main web project; they are built by the Tests project. -->
+  <ItemGroup>
+    <Compile Remove="Tests\\**\\*.cs" />
+  </ItemGroup>
+
 </Project>
