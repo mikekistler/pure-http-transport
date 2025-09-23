@@ -1,7 +1,13 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
-using PureHttpTransport.Models;
 using System.Collections.Generic;
+using ModelContextProtocol.Protocol;
+using System.Text.Json.Nodes;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Schema;
+using System.ComponentModel;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace PureHttpTransport;
 
@@ -18,90 +24,33 @@ public static class ToolsEndpoints
             .WithSummary("Get all available tools");
 
         // "tools/call"
-        toolsGroup.MapPut("/{name}/calls/{callId}", CallTool)
+        toolsGroup.MapPost("/{name}/calls", CallTool)
             .WithName("CallTool")
             .WithSummary("Invoke a tool call by name");
     }
 
     private static ListToolsResult ListTools()
     {
+        var options = new JsonSerializerOptions(JsonSerializerOptions.Web){
+            RespectNullableAnnotations = true,
+            RespectRequiredConstructorParameters = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        };
+        var inputSchema = options.GetJsonSchemaAsNode(typeof(GetCurrentWeatherInput));
+        var outputSchema = options.GetJsonSchemaAsNode(typeof(GetCurrentWeatherOutput));
         var tools = new List<Tool>
         {
             new Tool
             {
-                _meta = new Dictionary<string, object>(),
+                Meta = new JsonObject (),
                 Name = "getCurrentWeather",
                 Title = "Get Current Weather",
                 Description = "Get the current weather in a given location",
-                InputSchema = new Schema
-                {
-                    Type = "object",
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "location", new Schema { Type = "string", Description = "The city and state, e.g. San Francisco, CA", Properties = new Dictionary<string, object>(), Required = new List<string>() } },
-                        { "unit", new Schema { Type = "string", Description = "The unit of temperature, either 'celsius' or 'fahrenheit'", Properties = new Dictionary<string, object>(), Required = new List<string>() } }
-                    },
-                    Required = new List<string> { "location" }
-                },
-                OutputSchema = new Schema
-                {
-                    Type = "object",
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "temperature", new Schema { Type = "number", Description = "The current temperature", Properties = new Dictionary<string, object>(), Required = new List<string>() } },
-                        { "unit", new Schema { Type = "string", Description = "The unit of temperature, either 'celsius' or 'fahrenheit'", Properties = new Dictionary<string, object>(), Required = new List<string>() } },
-                        { "description", new Schema { Type = "string", Description = "A brief description of the current weather", Properties = new Dictionary<string, object>(), Required = new List<string>() } }
-                    },
-                    Required = new List<string> { "temperature", "unit", "description" }
-                },
+                InputSchema = inputSchema != null ? JsonDocument.Parse(inputSchema.ToJsonString()).RootElement : default,
+                OutputSchema = outputSchema != null ? JsonDocument.Parse(outputSchema.ToJsonString()).RootElement : default,
                 Annotations = new ToolAnnotations
                 {
                     Title = "Get Current Weather Tool",
-                    ReadOnlyHint = true,
-                    OpenWorldHint = true
-                }
-            },
-
-            new Tool
-            {
-                _meta = new Dictionary<string, object>(),
-                Name = "getWeatherForecast",
-                Title = "Get Weather Forecast",
-                Description = "Get the weather forecast for the next 5 days in a given location",
-                InputSchema = new Schema
-                {
-                    Type = "object",
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "location", new Schema { Type = "string", Description = "The city and state, e.g. San Francisco, CA", Properties = new Dictionary<string, object>(), Required = new List<string>() } },
-                        { "unit", new Schema { Type = "string", Description = "The unit of temperature, either 'celsius' or 'fahrenheit'", Properties = new Dictionary<string, object>(), Required = new List<string>() } }
-                    },
-                    Required = new List<string> { "location" }
-                },
-                OutputSchema = new Schema
-                {
-                    Type = "array",
-                    Properties = new Dictionary<string, object>
-                    {
-                        { "items", new Schema
-                            {
-                                Type = "object",
-                                Properties = new Dictionary<string, object>
-                                {
-                                    { "date", new Schema { Type = "string", Description = "Date of the forecast in YYYY-MM-DD", Properties = new Dictionary<string, object>(), Required = new List<string>() } },
-                                    { "high", new Schema { Type = "number", Description = "Expected high temperature", Properties = new Dictionary<string, object>(), Required = new List<string>() } },
-                                    { "low", new Schema { Type = "number", Description = "Expected low temperature", Properties = new Dictionary<string, object>(), Required = new List<string>() } },
-                                    { "unit", new Schema { Type = "string", Description = "Unit of temperature", Properties = new Dictionary<string, object>(), Required = new List<string>() } },
-                                    { "description", new Schema { Type = "string", Description = "Short forecast description", Properties = new Dictionary<string, object>(), Required = new List<string>() } }
-                                },
-                                Required = new List<string> { "date", "high", "low", "unit", "description" }
-                            }
-                        }
-                    }
-                },
-                Annotations = new ToolAnnotations
-                {
-                    Title = "5-day Weather Forecast Tool",
                     ReadOnlyHint = true,
                     OpenWorldHint = true
                 }
@@ -110,9 +59,9 @@ public static class ToolsEndpoints
 
         var result = new ListToolsResult
         {
-            _meta = new Dictionary<string, object>
+            Meta = new JsonObject
             {
-                { "totalTools", tools.Count }
+                ["totalTools"] = tools.Count
             },
             NextCursor = string.Empty,
             Tools = tools
@@ -121,94 +70,90 @@ public static class ToolsEndpoints
         return result;
     }
 
-    private static CallToolResult CallTool(string name, string callId, [FromBody] Dictionary<string, object>? arguments)
+    private static Results<Ok<CallToolResult>, BadRequest<ProblemDetails>> CallTool(
+        [Description("The name of the tool to call")] string name,
+
+        [FromBody] CallToolRequestParams requestParams,
+
+        [Description("The unique request ID for tracking purposes")]
+        [FromHeader(Name = "Mcp-Request-Id")] string? mcpRequestId
+    )
     {
         // Basic validation
         if (string.IsNullOrEmpty(name))
         {
-            return new CallToolResult
+            return TypedResults.BadRequest<ProblemDetails>(new()
             {
-                isError = true,
-                content = new List<object> { new { text = "tool name required" } }
-            };
+                Detail = "tool name required"
+            });
         }
 
         // Dispatch to supported tools
         switch (name)
         {
             case "getCurrentWeather":
-                return HandleGetCurrentWeather(arguments);
-            case "getWeatherForecast":
-                return HandleGetWeatherForecast(arguments);
+                return TypedResults.Ok<CallToolResult>(HandleGetCurrentWeather(requestParams.Arguments));
             default:
-                return new CallToolResult
+                return TypedResults.Ok<CallToolResult>(new CallToolResult
                 {
-                    isError = true,
-                    content = new List<object> { new { text = $"unknown tool: {name}" } }
-                };
+                    IsError = true,
+                    Content = new List<ContentBlock> { new TextContentBlock { Text = $"unknown tool: {name}" } }
+                });
         }
     }
 
-    private static CallToolResult HandleGetCurrentWeather(Dictionary<string, object>? arguments)
+    private static CallToolResult HandleGetCurrentWeather(IReadOnlyDictionary<string, JsonElement>? arguments)
     {
-        arguments ??= new Dictionary<string, object>();
-        arguments.TryGetValue("location", out var locationObj);
-        var location = locationObj as string ?? "Unknown";
+        string location = "Unknown";
+        string unit = "celsius";
 
-        arguments.TryGetValue("unit", out var unitObj);
-        var unit = (unitObj as string) ?? "celsius";
+        if (arguments != null)
+        {
+            if (arguments.TryGetValue("location", out var locationElem) && locationElem.ValueKind == JsonValueKind.String)
+            {
+                location = locationElem.GetString() ?? "Unknown";
+            }
+            if (arguments.TryGetValue("unit", out var unitElem) && unitElem.ValueKind == JsonValueKind.String)
+            {
+                unit = unitElem.GetString() ?? "celsius";
+            }
+        }
 
         // Fake weather for demonstration
         var temp = unit == "fahrenheit" ? 68.0 : 20.0;
 
-        var structured = new Dictionary<string, object>
+        var structuredNode = new JsonObject
         {
-            { "temperature", temp },
-            { "unit", unit },
-            { "description", $"Clear skies in {location}" }
+            ["temperature"] = temp,
+            ["unit"] = unit,
+            ["description"] = $"Clear skies in {location}"
         };
 
         return new CallToolResult
         {
-            content = new List<object> { new { text = structured["description"] } },
-            structuredContent = structured,
-            isError = false
+            Content = new List<ContentBlock> { new TextContentBlock { Text = (string)structuredNode["description"]! } as ContentBlock },
+            StructuredContent = structuredNode,
+            IsError = false
         };
     }
+}
 
-    private static CallToolResult HandleGetWeatherForecast(Dictionary<string, object>? arguments)
-    {
-        arguments ??= new Dictionary<string, object>();
-        arguments.TryGetValue("location", out var locationObj);
-        var location = locationObj as string ?? "Unknown";
+// --- POCO for schema generation ---
 
-        arguments.TryGetValue("unit", out var unitObj);
-        var unit = (unitObj as string) ?? "celsius";
+public class GetCurrentWeatherInput
+{
+    /// <summary>The city and state, e.g. San Francisco, CA</summary>
+    public string Location { get; set; } = string.Empty;
+    /// <summary>The unit of temperature, either 'celsius' or 'fahrenheit'</summary>
+    public string? Unit { get; set; }
+}
 
-        // Create a 5-day fake forecast
-        var items = new List<Dictionary<string, object>>();
-        for (int i = 0; i < 5; i++)
-        {
-            items.Add(new Dictionary<string, object>
-            {
-                { "date", System.DateTime.UtcNow.AddDays(i).ToString("yyyy-MM-dd") },
-                { "high", unit == "fahrenheit" ? 75 + i : 24 + i },
-                { "low", unit == "fahrenheit" ? 55 + i : 13 + i },
-                { "unit", unit },
-                { "description", $"Day {i+1}: Sunny in {location}" }
-            });
-        }
-
-        var structured = new Dictionary<string, object>
-        {
-            { "forecast", items }
-        };
-
-        return new CallToolResult
-        {
-            content = new List<object> { new { text = $"Returning {items.Count}-day forecast for {location}" } },
-            structuredContent = structured,
-            isError = false
-        };
-    }
+public class GetCurrentWeatherOutput
+{
+    /// <summary>The current temperature</summary>
+    public double Temperature { get; set; }
+    /// <summary>The unit of temperature, either 'celsius' or 'fahrenheit'</summary>
+    public string Unit { get; set; } = string.Empty;
+    /// <summary>A brief description of the current weather</summary>
+    public string Description { get; set; } = string.Empty;
 }

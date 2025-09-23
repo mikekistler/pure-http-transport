@@ -427,7 +427,7 @@ The following table summarizes the endpoints provided by the MCP Server using th
 | /resources/subscribe | POST   | resources/subscribe   | SubscribeRequest.params (*) | 202: Accepted |
 | /resources/templates | GET    | resources/templates/list |   | 200: ListResourceTemplatesResult |
 | /resources/unsubscribe | POST | resources/unsubscribe | UnsubscribeRequest.params (*) | 202: Accepted |
-| /responses           | POST   | _multiple_            | [ClientResult] | 202: Accepted |
+| /responses           | POST   | _multiple_            | ClientResult | 202: Accepted |
 | /tools               | GET    | tools/list            |   | 200: ListToolsResult |
 | /tools/{name}/calls/{guid} | PUT | tools/call         | CallToolRequest.params (*) | 200: CallToolResult |
 

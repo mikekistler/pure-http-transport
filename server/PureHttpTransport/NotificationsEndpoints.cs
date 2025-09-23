@@ -5,6 +5,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System;
+using Microsoft.AspNetCore.Http.HttpResults;
+using ModelContextProtocol.Protocol;
+
+using PureHttpTransport.Models;
 
 namespace PureHttpTransport;
 
@@ -13,16 +17,23 @@ public static class NotificationsEndpoints
     private class NotificationGroup
     {
         public string Id { get; init; } = Guid.NewGuid().ToString();
-        public List<object> Items { get; init; } = new List<object>();
+        public List<ServerNotification> Items { get; init; } = new List<ServerNotification>();
         public DateTime? PendingSince { get; set; }
         public string State { get; set; } = "active"; // active, pending, completed
     }
 
+    // These fields manage the state of notification groups:
+    // - _groups: all notification groups by ID (active, pending, or completed)
+    // - _activeQueue: queue of group IDs ready to be delivered to clients
+    // - _pending: groups that have been delivered but not yet acknowledged
     private static readonly ConcurrentDictionary<string, NotificationGroup> _groups = new();
     private static readonly ConcurrentQueue<string> _activeQueue = new();
     private static readonly ConcurrentDictionary<string, NotificationGroup> _pending = new();
 
+    // PendingTimeoutMilliseconds: how long (ms) a group can remain pending before being reactivated
     public static int PendingTimeoutMilliseconds = 30000;
+
+    // Timer and interval for periodically reactivating timed-out pending groups
     private static readonly Timer _reactivationTimer;
     private static readonly TimeSpan _reactivationInterval = TimeSpan.FromMilliseconds(5000);
 
@@ -36,7 +47,7 @@ public static class NotificationsEndpoints
         var notifications = app.MapGroup("/notifications").WithTags("Notifications");
 
         // GET /notifications returns an array of notifications (may be empty)
-        notifications.MapGet("/", (HttpResponse response) =>
+        notifications.MapGet("/", Ok<ServerNotification[]> (HttpResponse response) =>
         {
             // Dequeue a group if available
             while (_activeQueue.TryDequeue(out var id))
@@ -51,13 +62,12 @@ public static class NotificationsEndpoints
                     response.Headers["Mcp-Notifications-Group-Id"] = group.Id;
                     response.Headers["MCP-Protocol-Version"] = "2025-06-18";
 
-                    return Results.Json(group.Items);
+                    return TypedResults.Ok(group.Items.ToArray());
                 }
             }
 
             // No group available: return empty array
-            response.Headers["MCP-Protocol-Version"] = "2025-06-18";
-            return Results.Json(new object[0]);
+            return TypedResults.Ok(Array.Empty<ServerNotification>());
         })
         .WithName("GetNotifications")
         .WithSummary("Get server notifications (groups)");
@@ -99,7 +109,7 @@ public static class NotificationsEndpoints
         .WithSummary("Acknowledge a previously received group of notifications");
 
         // Internal helper to enqueue a group of notifications (for tests)
-        app.MapPost("/internal/enqueueNotifications", (List<object> items) =>
+        app.MapPost("/internal/enqueueNotifications", (List<ServerNotification> items) =>
         {
             var group = new NotificationGroup { Items = items };
             _groups[group.Id] = group;
