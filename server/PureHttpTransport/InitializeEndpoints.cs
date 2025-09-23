@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.HttpResults;
 using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport;
@@ -8,10 +10,19 @@ public static class InitializeEndpoints
 {
     public static IEndpointRouteBuilder MapInitializeEndpoint(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/initialize", (InitializeRequestParams? initParams, HttpResponse response) =>
+        var initialize = app.MapGroup("/initialize").WithTags("Initialization");
+
+        initialize.MapPost("/", Results<Ok<InitializeResult>, BadRequest<ProblemDetails>> (
+            InitializeRequestParams? initParams
+        ) =>
         {
-            // Advertise the protocol version we support
-            response.Headers["MCP-Protocol-Version"] = "2025-06-18";
+            if (initParams == null)
+            {
+                return TypedResults.BadRequest<ProblemDetails>(new()
+                {
+                    Detail = "Request body is required.",
+                });
+            }
 
             InitializeResult result = new InitializeResult
             {

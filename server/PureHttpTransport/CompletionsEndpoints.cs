@@ -9,8 +9,10 @@ public static class CompletionsEndpoints
 {
     public static IEndpointRouteBuilder MapCompletionsEndpoints(this IEndpointRouteBuilder app)
     {
+        var completions = app.MapGroup("/completions").WithTags("Completions");
+
         // POST /completions - client requests a completion from the server
-        app.MapPost("/completions", Results<Ok<CompleteResult>, BadRequest<string>> (
+        completions.MapPost("/", Results<Ok<CompleteResult>, BadRequest<ProblemDetails>> (
             [Description("The completion request parameters")]
             [FromBody] CompleteRequestParams body,
 
@@ -20,7 +22,10 @@ public static class CompletionsEndpoints
         {
             if (body == null)
             {
-                return TypedResults.BadRequest("Missing request body");
+                return TypedResults.BadRequest<ProblemDetails>(new()
+                {
+                    Detail = "Missing request body"
+                });
             }
 
             var result = new CompleteResult

@@ -17,13 +17,14 @@ public static class PromptsEndpoints
 
     public static IEndpointRouteBuilder MapPromptsEndpoints(this IEndpointRouteBuilder app)
     {
+        var prompts = app.MapGroup("/prompts").WithTags("Prompts");
         // List prompts
-        app.MapGet("/prompts", () => Results.Json(_prompts.Keys.ToArray()))
+        prompts.MapGet("/", () => Results.Json(_prompts.Keys.ToArray()))
             .WithName("ListPrompts")
             .WithSummary("List available prompts");
 
         // Get a prompt by name and render with optional params in the request body
-        app.MapPost("/prompts/{name}", async (string name, HttpRequest req) =>
+        prompts.MapPost("/{name}", async (string name, HttpRequest req) =>
         {
             if (!_prompts.TryGetValue(name, out var template))
             {
@@ -64,7 +65,8 @@ public static class PromptsEndpoints
             _prompts[name] = content;
             return Results.Ok(new { name = name, content = content });
         })
-        .WithName("SetPrompt");
+        .WithName("SetPrompt")
+        .ExcludeFromDescription();
 
         return app;
     }

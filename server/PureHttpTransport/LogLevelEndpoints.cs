@@ -1,48 +1,37 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport;
 
 public static class LogLevelEndpoints
 {
-    private static readonly HashSet<string> _allowed = new() { "trace", "debug", "info", "warn", "error", "fatal", "off" };
-
-    public static string CurrentLogLevel { get; private set; } = "info";
-
-    public class LogLevelParams
-    {
-        public string? level { get; set; }
-    }
+    public static LoggingLevel CurrentLogLevel { get; private set; } = LoggingLevel.Info;
 
     public static IEndpointRouteBuilder MapLogLevelEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/logLevel", async (LogLevelParams? body, HttpResponse res) =>
+        var logLevel = app.MapGroup("/logLevel").WithTags("Logging");
+
+        logLevel.MapPost("/", Results<NoContent, BadRequest<ProblemDetails>> (SetLevelRequestParams body) =>
         {
-            if (body == null || string.IsNullOrEmpty(body.level))
+            if (body == null)
             {
-                res.StatusCode = StatusCodes.Status400BadRequest;
-                await res.WriteAsync("Missing or empty level");
-                return Results.StatusCode(StatusCodes.Status400BadRequest);
+                return TypedResults.BadRequest<ProblemDetails>(new()
+                {
+                    Detail = "Missing body"
+                });
             }
 
-            var lvl = body.level!.ToLowerInvariant();
-            if (!_allowed.Contains(lvl))
-            {
-                res.StatusCode = StatusCodes.Status400BadRequest;
-                await res.WriteAsync("Invalid level");
-                return Results.StatusCode(StatusCodes.Status400BadRequest);
-            }
+            CurrentLogLevel = body.Level;
 
-            CurrentLogLevel = lvl;
-            return Results.Ok(new { level = CurrentLogLevel });
+            return TypedResults.NoContent();
         })
         .WithName("SetLogLevel");
 
         // Test helper to read current level
         app.MapGet("/internal/getLogLevel", () => Results.Ok(new { level = CurrentLogLevel }))
-            .WithName("GetLogLevel");
+            .WithName("GetLogLevel")
+            .ExcludeFromDescription();
 
         return app;
     }

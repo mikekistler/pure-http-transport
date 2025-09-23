@@ -26,8 +26,10 @@ public static class ResourcesEndpoints
 
     public static IEndpointRouteBuilder MapResourcesEndpoints(this IEndpointRouteBuilder app)
     {
+        var resources = app.MapGroup("/resources").WithTags("Resources");
+
         // List resources
-        app.MapGet("/resources", () =>
+        resources.MapGet("/", () =>
         {
             var list = _resources.Values.Select(r => new { id = r.Id, name = r.Name, contentType = r.ContentType }).ToArray();
             return Results.Json(list);
@@ -35,7 +37,7 @@ public static class ResourcesEndpoints
         .WithName("ListResources");
 
         // Read a resource
-        app.MapPost("/resources", async (HttpRequest req) =>
+        resources.MapPost("/", async (HttpRequest req) =>
         {
             // Expect body like { id: "..." }
             Dictionary<string, object>? body = null;
@@ -66,7 +68,7 @@ public static class ResourcesEndpoints
         .WithName("ReadResource");
 
         // Subscribe to a resource
-        app.MapPost("/resources/subscribe", async (HttpRequest req) =>
+        resources.MapPost("/subscribe", async (HttpRequest req) =>
         {
             Dictionary<string, object>? body = null;
             try
@@ -94,7 +96,7 @@ public static class ResourcesEndpoints
         .WithName("SubscribeResource");
 
         // Unsubscribe
-        app.MapPost("/resources/unsubscribe", async (HttpRequest req) =>
+        resources.MapPost("/unsubscribe", async (HttpRequest req) =>
         {
             Dictionary<string, object>? body = null;
             try
@@ -123,7 +125,7 @@ public static class ResourcesEndpoints
         .WithName("UnsubscribeResource");
 
         // List templates
-        app.MapGet("/resources/templates", () => Results.Json(_templates))
+        resources.MapGet("/templates", () => Results.Json(_templates))
             .WithName("ListResourceTemplates");
 
         // Internal helper to add a resource for tests
@@ -146,7 +148,8 @@ public static class ResourcesEndpoints
             _resources[resource.Id] = resource;
             return Results.Ok(new { id = resource.Id });
         })
-        .WithName("AddResource");
+        .WithName("AddResource")
+        .ExcludeFromDescription();
 
         return app;
     }

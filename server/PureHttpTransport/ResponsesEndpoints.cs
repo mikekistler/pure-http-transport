@@ -9,7 +9,7 @@ using System;
 
 namespace PureHttpTransport;
 
-public static class RequestsEndpoints
+public static class ResponsesEndpoints
 {
     private class RequestEntry
     {
@@ -29,51 +29,54 @@ public static class RequestsEndpoints
     private static readonly Timer _reactivationTimer;
     private static readonly TimeSpan _reactivationInterval = TimeSpan.FromMilliseconds(5000);
 
-    static RequestsEndpoints()
+    static ResponsesEndpoints()
     {
         // Start a timer to re-activate stale pending requests
         _reactivationTimer = new Timer(_ => ReactivatePending(), null, _reactivationInterval, _reactivationInterval);
     }
 
-    public static IEndpointRouteBuilder MapRequestsEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapResponsesEndpoints(this IEndpointRouteBuilder app)
     {
-        var requests = app.MapGroup("/requests").WithTags("Requests");
+        var responses = app.MapGroup("/responses").WithTags("Responses");
 
-        requests.MapGet("/", (HttpResponse response) =>
+        // Client responses to server requests
+        responses.MapPost("/", async (HttpRequest req, HttpResponse res) =>
         {
-            // Dequeue until we find an active request
-            while (_activeQueue.TryDequeue(out var id))
+            // The client MUST include Mcp-Request-Id to identify which request this response completes
+            if (!req.Headers.TryGetValue("Mcp-Request-Id", out var idValues))
             {
-                if (_store.TryGetValue(id, out var entry) && entry.State == "active")
-                {
-                    // Mark pending
-                    entry.State = "pending";
-                    entry.PendingSince = DateTime.UtcNow;
-                    _pending[id] = entry;
-
-                    // Set required headers
-                    response.Headers["Mcp-Request-Id"] = entry.Id;
-                    response.Headers["MCP-Protocol-Version"] = "2025-06-18";
-
-                    return Results.Json(entry.Body);
-                }
+                res.StatusCode = StatusCodes.Status400BadRequest;
+                await res.WriteAsync("Missing Mcp-Request-Id header");
+                return Results.StatusCode(StatusCodes.Status400BadRequest);
             }
 
-            return Results.NoContent();
-        })
-        .WithName("GetServerRequests")
-        .WithSummary("Get server-initiated requests (one at a time)");
+            var id = idValues.First();
 
-        // Helper to enqueue server requests for tests or internal use
-        app.MapPost("/internal/enqueueRequest", (object body) =>
-        {
-            var entry = new RequestEntry { Body = body };
-            _store[entry.Id] = entry;
-            _activeQueue.Enqueue(entry.Id);
-            return Results.Ok(new { id = entry.Id });
+            if (string.IsNullOrEmpty(id))
+            {
+                res.StatusCode = StatusCodes.Status400BadRequest;
+                await res.WriteAsync("Empty Mcp-Request-Id header");
+                return Results.StatusCode(StatusCodes.Status400BadRequest);
+            }
+
+            if (_pending.TryRemove(id, out var entry))
+            {
+                entry.State = "completed";
+                _store.TryRemove(id, out _);
+                res.StatusCode = StatusCodes.Status202Accepted;
+                await res.WriteAsync(string.Empty);
+                return Results.StatusCode(StatusCodes.Status202Accepted);
+            }
+            else
+            {
+                // Not found or already completed
+                res.StatusCode = StatusCodes.Status404NotFound;
+                await res.WriteAsync("Request not found or not pending");
+                return Results.StatusCode(StatusCodes.Status404NotFound);
+            }
         })
-        .WithName("EnqueueRequest")
-        .ExcludeFromDescription();
+        .WithName("ResponsesEndpoint")
+        .WithSummary("Receive client responses to server requests");
 
         return app;
     }

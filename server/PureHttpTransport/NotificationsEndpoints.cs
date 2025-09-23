@@ -33,8 +33,10 @@ public static class NotificationsEndpoints
 
     public static IEndpointRouteBuilder MapNotificationsEndpoints(this IEndpointRouteBuilder app)
     {
+        var notifications = app.MapGroup("/notifications").WithTags("Notifications");
+
         // GET /notifications returns an array of notifications (may be empty)
-        app.MapGet("/notifications", (HttpResponse response) =>
+        notifications.MapGet("/", (HttpResponse response) =>
         {
             // Dequeue a group if available
             while (_activeQueue.TryDequeue(out var id))
@@ -61,7 +63,7 @@ public static class NotificationsEndpoints
         .WithSummary("Get server notifications (groups)");
 
         // POST /notifications to acknowledge a group
-        app.MapPost("/notifications", async (HttpRequest req, HttpResponse res) =>
+        notifications.MapPost("/", async (HttpRequest req, HttpResponse res) =>
         {
             if (!req.Headers.TryGetValue("Mcp-Notifications-Group-Id", out var idValues))
             {
@@ -104,7 +106,8 @@ public static class NotificationsEndpoints
             _activeQueue.Enqueue(group.Id);
             return Results.Ok(new { id = group.Id });
         })
-        .WithName("EnqueueNotifications");
+        .WithName("EnqueueNotifications")
+        .ExcludeFromDescription();
 
         return app;
     }

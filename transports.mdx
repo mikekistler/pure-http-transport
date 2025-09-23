@@ -447,6 +447,14 @@ to support request cancellation.
 
 Servers **SHOULD** assign globally unique JSON RPC message IDs to their requests and use the same value for `Mcp-Request-Id`.
 
+### Error responses
+
+Any error response sent by either the server or the client **MUST** conform to the Problem Details format as defined in [RFC 9457].
+Further, the response **MUST** include a "detail" property which should correspond to the "message" of the JSONRPCError schema.
+The entire response **SHOULD** be mapped to the "data" property of JSONRPCError Schema.
+
+[RFC 9457]: https://datatracker.ietf.org/doc/html/rfc9457
+
 ### HTTP Cookies
 
 The HTTP standard allows servers to request that clients store server state (cookies) and include this state
