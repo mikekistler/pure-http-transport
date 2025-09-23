@@ -6,11 +6,6 @@ public static class PureHttpTransport
 {
     public static IEndpointRouteBuilder UsePureHttpTransport(this IEndpointRouteBuilder app)
     {
-        // Configure your API endpoints here
-        // Example:
-        // app.MapControllers();
-        // app.MapGet("/api/endpoint", handler);
-
         app.MapCompletionsEndpoints();
         app.MapInitializeEndpoint();
         app.MapLogLevelEndpoints();
@@ -19,6 +14,7 @@ public static class PureHttpTransport
         app.MapPromptsEndpoints();
         app.MapRequestsEndpoints();
         app.MapResourcesEndpoints();
+        app.MapResponsesEndpoints();
         app.MapToolsEndpoints();
 
         return app;

@@ -26,7 +26,8 @@ public static class LogLevelEndpoints
 
             return TypedResults.NoContent();
         })
-        .WithName("SetLogLevel");
+        .WithName("SetLogLevel")
+        .WithDescription("Set the current logging level.");
 
         // Test helper to read current level
         app.MapGet("/internal/getLogLevel", () => Results.Ok(new { level = CurrentLogLevel }))

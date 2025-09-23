@@ -34,7 +34,8 @@ public static class ResourcesEndpoints
             var list = _resources.Values.Select(r => new { id = r.Id, name = r.Name, contentType = r.ContentType }).ToArray();
             return Results.Json(list);
         })
-        .WithName("ListResources");
+        .WithName("ListResources")
+        .WithDescription("List all available resources.");
 
         // Read a resource
         resources.MapPost("/", async (HttpRequest req) =>
@@ -65,7 +66,8 @@ public static class ResourcesEndpoints
             var content = Encoding.UTF8.GetString(resource.Data);
             return Results.Json(new { id = resource.Id, name = resource.Name, contentType = resource.ContentType, content = content });
         })
-        .WithName("ReadResource");
+        .WithName("ReadResource")
+        .WithDescription("Read a resource with a specific resource URI.");
 
         // Subscribe to a resource
         resources.MapPost("/subscribe", async (HttpRequest req) =>
@@ -93,7 +95,8 @@ public static class ResourcesEndpoints
             _subscriptions[id] = true;
             return Results.Accepted();
         })
-        .WithName("SubscribeResource");
+        .WithName("SubscribeResource")
+        .WithDescription("Subscribe to changes for a specific resource URI.");
 
         // Unsubscribe
         resources.MapPost("/unsubscribe", async (HttpRequest req) =>
@@ -122,11 +125,13 @@ public static class ResourcesEndpoints
                 return Results.NotFound(new { error = "subscription not found" });
             }
         })
-        .WithName("UnsubscribeResource");
+        .WithName("UnsubscribeResource")
+        .WithDescription("Unsubscribe from changes for a specific resource URI.");
 
         // List templates
         resources.MapGet("/templates", () => Results.Json(_templates))
-            .WithName("ListResourceTemplates");
+            .WithName("ListResourceTemplates")
+            .WithDescription("List available resource templates.");
 
         // Internal helper to add a resource for tests
         app.MapPost("/internal/addResource", async (HttpRequest req) =>

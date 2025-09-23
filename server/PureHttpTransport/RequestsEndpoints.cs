@@ -61,7 +61,7 @@ public static class RequestsEndpoints
 
             return Results.NoContent();
         })
-        .WithName("GetServerRequests")
+        .WithName("GetServerRequest")
         .WithSummary("Get server-initiated requests (one at a time)");
 
         // Helper to enqueue server requests for tests or internal use

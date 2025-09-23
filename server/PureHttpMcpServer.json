@@ -14,12 +14,7 @@
         "operationId": "CreateCompletion",
         "parameters": [
           {
-            "name": "Mcp-Request-Id",
-            "in": "header",
-            "description": "The unique request ID for tracking purposes",
-            "schema": {
-              "type": "string"
-            }
+            "$ref": "#/components/parameters/McpRequestId"
           }
         ],
         "requestBody": {
@@ -64,6 +59,11 @@
         ],
         "summary": "Initialize the MCP session and return server capabilities",
         "operationId": "Initialize",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -102,7 +102,13 @@
         "tags": [
           "Logging"
         ],
+        "description": "Set the current logging level.",
         "operationId": "SetLogLevel",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -173,6 +179,11 @@
         ],
         "summary": "Ping the server; returns 202 Accepted to indicate reachability",
         "operationId": "Ping",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -187,6 +198,11 @@
         ],
         "summary": "List available prompts",
         "operationId": "ListPrompts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -209,6 +225,9 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/McpRequestId"
           }
         ],
         "responses": {
@@ -224,10 +243,15 @@
           "Requests"
         ],
         "summary": "Get server-initiated requests (one at a time)",
-        "operationId": "GetServerRequests",
+        "operationId": "GetServerRequest",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "headers": {
+              "McpRequestId": {
+                "$ref": "#/components/headers/McpRequestId"
+              }
+            }
           }
         }
       }
@@ -237,7 +261,13 @@
         "tags": [
           "Resources"
         ],
+        "description": "List all available resources.",
         "operationId": "ListResources",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -248,6 +278,7 @@
         "tags": [
           "Resources"
         ],
+        "description": "Read a resource with a specific resource URI.",
         "operationId": "ReadResource",
         "responses": {
           "200": {
@@ -261,6 +292,7 @@
         "tags": [
           "Resources"
         ],
+        "description": "Subscribe to changes for a specific resource URI.",
         "operationId": "SubscribeResource",
         "responses": {
           "200": {
@@ -274,6 +306,7 @@
         "tags": [
           "Resources"
         ],
+        "description": "Unsubscribe from changes for a specific resource URI.",
         "operationId": "UnsubscribeResource",
         "responses": {
           "200": {
@@ -287,7 +320,22 @@
         "tags": [
           "Resources"
         ],
+        "description": "List available resource templates.",
         "operationId": "ListResourceTemplates",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/responses": {
+      "post": {
+        "tags": [
+          "Responses"
+        ],
+        "summary": "Receive client responses to server requests",
+        "operationId": "ResponsesEndpoint",
         "responses": {
           "200": {
             "description": "OK"
@@ -302,6 +350,11 @@
         ],
         "summary": "Get all available tools",
         "operationId": "ListTools",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -340,6 +393,9 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/McpRequestId"
           }
         ],
         "requestBody": {
@@ -1024,6 +1080,26 @@
         },
         "nullable": true
       }
+    },
+    "parameters": {
+      "McpRequestId": {
+        "name": "Mcp-Request-Id",
+        "in": "header",
+        "description": "The unique request ID for tracking purposes",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "headers": {
+      "McpRequestId": {
+        "description": "The unique request ID for tracking purposes",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
     }
   },
   "tags": [
@@ -1050,6 +1126,9 @@
     },
     {
       "name": "Resources"
+    },
+    {
+      "name": "Responses"
     },
     {
       "name": "Tools"
