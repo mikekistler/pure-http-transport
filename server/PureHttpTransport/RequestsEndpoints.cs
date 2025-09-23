@@ -38,6 +38,7 @@ public static class RequestsEndpoints
     public static IEndpointRouteBuilder MapRequestsEndpoints(this IEndpointRouteBuilder app)
     {
         var requests = app.MapGroup("/requests").WithTags("Requests");
+        requests.AddEndpointFilter<ProtocolVersionFilter>();
 
         requests.MapGet("/", (HttpResponse response) =>
         {

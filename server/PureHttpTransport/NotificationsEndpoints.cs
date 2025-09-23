@@ -47,6 +47,7 @@ public static class NotificationsEndpoints
     public static IEndpointRouteBuilder MapNotificationsEndpoints(this IEndpointRouteBuilder app)
     {
         var notifications = app.MapGroup("/notifications").WithTags("Notifications");
+        notifications.AddEndpointFilter<ProtocolVersionFilter>();
 
         // GET /notifications returns an array of notifications (may be empty)
         notifications.MapGet("/", Ok<IServerNotification[]> (HttpResponse response) =>

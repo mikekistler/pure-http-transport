@@ -11,6 +11,7 @@ public static class LogLevelEndpoints
     public static IEndpointRouteBuilder MapLogLevelEndpoints(this IEndpointRouteBuilder app)
     {
         var logLevel = app.MapGroup("/logLevel").WithTags("Logging");
+        logLevel.AddEndpointFilter<ProtocolVersionFilter>();
 
         logLevel.MapPost("/", Results<NoContent, BadRequest<ProblemDetails>> (SetLevelRequestParams body) =>
         {

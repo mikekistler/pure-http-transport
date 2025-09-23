@@ -38,6 +38,7 @@ public static class ResponsesEndpoints
     public static IEndpointRouteBuilder MapResponsesEndpoints(this IEndpointRouteBuilder app)
     {
         var responses = app.MapGroup("/responses").WithTags("Responses");
+        responses.AddEndpointFilter<ProtocolVersionFilter>();
 
         // Client responses to server requests
         responses.MapPost("/", async (HttpRequest req, HttpResponse res) =>

@@ -15,8 +15,8 @@ public static class ToolsEndpoints
 {
     public static void MapToolsEndpoints(this IEndpointRouteBuilder app)
     {
-        var toolsGroup = app.MapGroup("/tools")
-            .WithTags("Tools");
+        var toolsGroup = app.MapGroup("/tools").WithTags("Tools");
+        toolsGroup.AddEndpointFilter<ProtocolVersionFilter>();
 
         // "tools/list"
         toolsGroup.MapGet("/", ListTools)
@@ -73,10 +73,7 @@ public static class ToolsEndpoints
     private static Results<Ok<CallToolResult>, BadRequest<ProblemDetails>> CallTool(
         [Description("The name of the tool to call")] string name,
 
-        [FromBody] CallToolRequestParams requestParams,
-
-        [Description("The unique request ID for tracking purposes")]
-        [FromHeader(Name = "Mcp-Request-Id")] string? mcpRequestId
+        [FromBody] CallToolRequestParams requestParams
     )
     {
         // Basic validation

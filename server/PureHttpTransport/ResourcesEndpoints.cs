@@ -27,6 +27,7 @@ public static class ResourcesEndpoints
     public static IEndpointRouteBuilder MapResourcesEndpoints(this IEndpointRouteBuilder app)
     {
         var resources = app.MapGroup("/resources").WithTags("Resources");
+        resources.AddEndpointFilter<ProtocolVersionFilter>();
 
         // List resources
         resources.MapGet("/", () =>

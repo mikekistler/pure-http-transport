@@ -10,6 +10,7 @@ public static class CompletionsEndpoints
     public static IEndpointRouteBuilder MapCompletionsEndpoints(this IEndpointRouteBuilder app)
     {
         var completions = app.MapGroup("/completions").WithTags("Completions");
+        completions.AddEndpointFilter<ProtocolVersionFilter>();
 
         // POST /completions - client requests a completion from the server
         completions.MapPost("/", Results<Ok<CompleteResult>, BadRequest<ProblemDetails>> (

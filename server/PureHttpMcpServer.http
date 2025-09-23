@@ -4,7 +4,8 @@ GET {{HostAddress}}/openapi/v1.json
 
 ###
 
-GET {{HostAddress}}/tools/
+GET {{HostAddress}}/ping
 Accept: application/json
+Mcp-Protocol-Version: 2025-06-18
 
 ###

@@ -18,6 +18,7 @@ public static class PromptsEndpoints
     public static IEndpointRouteBuilder MapPromptsEndpoints(this IEndpointRouteBuilder app)
     {
         var prompts = app.MapGroup("/prompts").WithTags("Prompts");
+        prompts.AddEndpointFilter<ProtocolVersionFilter>();
         // List prompts
         prompts.MapGet("/", () => Results.Json(_prompts.Keys.ToArray()))
             .WithName("ListPrompts")

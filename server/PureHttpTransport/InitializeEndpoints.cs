@@ -11,6 +11,7 @@ public static class InitializeEndpoints
     public static IEndpointRouteBuilder MapInitializeEndpoint(this IEndpointRouteBuilder app)
     {
         var initialize = app.MapGroup("/initialize").WithTags("Initialization");
+        initialize.AddEndpointFilter<ProtocolVersionFilter>();
 
         initialize.MapPost("/", Results<Ok<InitializeResult>, BadRequest<ProblemDetails>> (
             InitializeRequestParams? initParams
