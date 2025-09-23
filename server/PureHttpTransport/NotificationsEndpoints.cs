@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using ModelContextProtocol.Protocol;
 
 using PureHttpTransport.Models;
+using System.ComponentModel;
+using Microsoft.AspNetCore.Mvc;
 
 namespace PureHttpTransport;
 
@@ -17,7 +19,7 @@ public static class NotificationsEndpoints
     private class NotificationGroup
     {
         public string Id { get; init; } = Guid.NewGuid().ToString();
-        public List<ServerNotification> Items { get; init; } = new List<ServerNotification>();
+        public List<IServerNotification> Items { get; init; } = new List<IServerNotification>();
         public DateTime? PendingSince { get; set; }
         public string State { get; set; } = "active"; // active, pending, completed
     }
@@ -47,7 +49,7 @@ public static class NotificationsEndpoints
         var notifications = app.MapGroup("/notifications").WithTags("Notifications");
 
         // GET /notifications returns an array of notifications (may be empty)
-        notifications.MapGet("/", Ok<ServerNotification[]> (HttpResponse response) =>
+        notifications.MapGet("/", Ok<IServerNotification[]> (HttpResponse response) =>
         {
             // Dequeue a group if available
             while (_activeQueue.TryDequeue(out var id))
@@ -67,49 +69,59 @@ public static class NotificationsEndpoints
             }
 
             // No group available: return empty array
-            return TypedResults.Ok(Array.Empty<ServerNotification>());
+            return TypedResults.Ok(Array.Empty<IServerNotification>());
         })
         .WithName("GetNotifications")
         .WithSummary("Get server notifications (groups)");
 
-        // POST /notifications to acknowledge a group
-        notifications.MapPost("/", async (HttpRequest req, HttpResponse res) =>
+        // POST /notifications to send notifications from client to server and acknowledge a group
+        notifications.MapPost("/", Accepted (
+            [Description("A collection of notifications being sent from client to server.")]
+            IClientNotification[] notifications,
+
+            [FromHeader(Name = "Mcp-Group-Id")] string? groupId ) =>
         {
-            if (!req.Headers.TryGetValue("Mcp-Notifications-Group-Id", out var idValues))
+            // First check for groupId to acknowledge previously sent notifications from server to client
+            if (!string.IsNullOrEmpty(groupId))
             {
-                res.StatusCode = StatusCodes.Status400BadRequest;
-                await res.WriteAsync("Missing Mcp-Notifications-Group-Id header");
-                return Results.StatusCode(StatusCodes.Status400BadRequest);
+                if (_pending.TryRemove(groupId, out var group))
+                {
+                    group.State = "completed";
+                    _groups.TryRemove(groupId, out _);
+                }
             }
 
-            var id = idValues.First();
-            if (string.IsNullOrEmpty(id))
+            // Process incoming notifications from client to server
+            foreach (var notification in notifications)
             {
-                res.StatusCode = StatusCodes.Status400BadRequest;
-                await res.WriteAsync("Empty Mcp-Notifications-Group-Id header");
-                return Results.StatusCode(StatusCodes.Status400BadRequest);
-            }
+                switch (notification)
+                {
+                    case CancelledNotification cancelled:
+                        // Handle cancellation
+                        Console.WriteLine($"Received cancellation for request: {cancelled.Params.RequestId}");
+                        break;
+                    case InitializedNotification initialized:
+                        // Handle initialization
+                        Console.WriteLine("Client initialized.");
+                        break;
+                    case RootsListChangedNotification rootsChanged:
+                        // Handle roots list change
+                        Console.WriteLine("Roots list changed.");
+                        break;
+                    default:
+                        var method = (notification as dynamic).Method;
+                        Console.WriteLine($"Received unknown notification type: {method}");
+                        break;
+                }
+            };
 
-            if (_pending.TryRemove(id, out var group))
-            {
-                group.State = "completed";
-                _groups.TryRemove(id, out _);
-                res.StatusCode = StatusCodes.Status202Accepted;
-                await res.WriteAsync(string.Empty);
-                return Results.StatusCode(StatusCodes.Status202Accepted);
-            }
-            else
-            {
-                res.StatusCode = StatusCodes.Status404NotFound;
-                await res.WriteAsync("Notification group not found or not pending");
-                return Results.StatusCode(StatusCodes.Status404NotFound);
-            }
+            return TypedResults.Accepted("about:blank");
         })
         .WithName("AcknowledgeNotifications")
         .WithSummary("Acknowledge a previously received group of notifications");
 
         // Internal helper to enqueue a group of notifications (for tests)
-        app.MapPost("/internal/enqueueNotifications", (List<ServerNotification> items) =>
+        app.MapPost("/internal/enqueueNotifications", (List<IServerNotification> items) =>
         {
             var group = new NotificationGroup { Items = items };
             _groups[group.Id] = group;

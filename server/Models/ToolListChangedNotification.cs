@@ -5,7 +5,7 @@ namespace PureHttpTransport.Models;
 /// <summary>
 /// An optional notification from the server to the client, informing it that the list of tools it offers has changed. This may be issued by servers without any previous subscription from the client.
 /// </summary>
-public sealed class ToolListChangedNotification : ServerNotification
+public sealed class ToolListChangedNotification : IServerNotification
 {
     /// <summary>
     /// Always "notifications/tools/list_changed"

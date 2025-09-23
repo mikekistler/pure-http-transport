@@ -151,7 +151,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ServerNotification"
+                    "$ref": "#/components/schemas/IServerNotification"
                   }
                 }
               }
@@ -165,9 +165,32 @@
         ],
         "summary": "Acknowledge a previously received group of notifications",
         "operationId": "AcknowledgeNotifications",
+        "parameters": [
+          {
+            "name": "Mcp-Group-Id",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "A collection of notifications being sent from client to server.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/IClientNotification"
+                }
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
-            "description": "OK"
+          "202": {
+            "description": "Accepted"
           }
         }
       }
@@ -574,6 +597,77 @@
         "type": "object",
         "nullable": true
       },
+      "IClientNotification": {
+        "required": [
+          "Method"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/IServerNotificationCancelledNotification"
+          },
+          {
+            "$ref": "#/components/schemas/IClientNotificationInitializedNotification"
+          },
+          {
+            "$ref": "#/components/schemas/IServerNotificationProgressNotification"
+          },
+          {
+            "$ref": "#/components/schemas/IClientNotificationRootsListChangedNotification"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "Method",
+          "mapping": {
+            "notifications/cancelled": "#/components/schemas/IClientNotificationCancelledNotification",
+            "notifications/initialized": "#/components/schemas/IClientNotificationInitializedNotification",
+            "notifications/progress": "#/components/schemas/IClientNotificationProgressNotification",
+            "notifications/roots/list_changed": "#/components/schemas/IClientNotificationRootsListChangedNotification"
+          }
+        }
+      },
+      "IClientNotificationInitializedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/initialized"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "IClientNotificationRootsListChangedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/roots/list_changed"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
       "Implementation": {
         "required": [
           "name",
@@ -638,6 +732,233 @@
           },
           "_meta": {
             "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "IServerNotification": {
+        "required": [
+          "Method"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/IServerNotificationCancelledNotification"
+          },
+          {
+            "$ref": "#/components/schemas/IServerNotificationLoggingMessageNotification"
+          },
+          {
+            "$ref": "#/components/schemas/IServerNotificationProgressNotification"
+          },
+          {
+            "$ref": "#/components/schemas/IServerNotificationPromptListChangedNotification"
+          },
+          {
+            "$ref": "#/components/schemas/IServerNotificationResourceListChangedNotification"
+          },
+          {
+            "$ref": "#/components/schemas/IServerNotificationResourceUpdatedNotification"
+          },
+          {
+            "$ref": "#/components/schemas/IServerNotificationToolListChangedNotification"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "Method",
+          "mapping": {
+            "notifications/cancelled": "#/components/schemas/IServerNotificationCancelledNotification",
+            "notifications/message": "#/components/schemas/IServerNotificationLoggingMessageNotification",
+            "notifications/progress": "#/components/schemas/IServerNotificationProgressNotification",
+            "notifications/prompts/list_changed": "#/components/schemas/IServerNotificationPromptListChangedNotification",
+            "notifications/resources/list_changed": "#/components/schemas/IServerNotificationResourceListChangedNotification",
+            "notifications/resources/updated": "#/components/schemas/IServerNotificationResourceUpdatedNotification",
+            "notifications/tools/list_changed": "#/components/schemas/IServerNotificationToolListChangedNotification"
+          }
+        }
+      },
+      "IServerNotificationCancelledNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/cancelled"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "requestId": { },
+              "reason": {
+                "type": "string",
+                "nullable": true
+              },
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "IServerNotificationLoggingMessageNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/message"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "level": {
+                "$ref": "#/components/schemas/LoggingLevel"
+              },
+              "logger": {
+                "type": "string",
+                "nullable": true
+              },
+              "data": {
+                "$ref": "#/components/schemas/NullableOfJsonElement"
+              },
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "IServerNotificationProgressNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/progress"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              },
+              "progressToken": { },
+              "progress": {
+                "type": "object",
+                "properties": {
+                  "progress": {
+                    "type": "number",
+                    "format": "float",
+                    "nullable": true
+                  },
+                  "total": {
+                    "type": "number",
+                    "format": "float",
+                    "nullable": true
+                  },
+                  "message": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "IServerNotificationPromptListChangedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/prompts/list_changed"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "IServerNotificationResourceListChangedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/resources/list_changed"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "IServerNotificationResourceUpdatedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/resources/updated"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string",
+                "nullable": true
+              },
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "IServerNotificationToolListChangedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/tools/list_changed"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
           }
         }
       },
@@ -772,233 +1093,6 @@
           },
           "completions": {
             "$ref": "#/components/schemas/CompletionsCapability"
-          }
-        }
-      },
-      "ServerNotification": {
-        "required": [
-          "Method"
-        ],
-        "type": "object",
-        "anyOf": [
-          {
-            "$ref": "#/components/schemas/ServerNotificationCancelledNotification"
-          },
-          {
-            "$ref": "#/components/schemas/ServerNotificationLoggingMessageNotification"
-          },
-          {
-            "$ref": "#/components/schemas/ServerNotificationProgressNotification"
-          },
-          {
-            "$ref": "#/components/schemas/ServerNotificationPromptListChangedNotification"
-          },
-          {
-            "$ref": "#/components/schemas/ServerNotificationResourceListChangedNotification"
-          },
-          {
-            "$ref": "#/components/schemas/ServerNotificationResourceUpdatedNotification"
-          },
-          {
-            "$ref": "#/components/schemas/ServerNotificationToolListChangedNotification"
-          }
-        ],
-        "discriminator": {
-          "propertyName": "Method",
-          "mapping": {
-            "notifications/cancelled": "#/components/schemas/ServerNotificationCancelledNotification",
-            "notifications/message": "#/components/schemas/ServerNotificationLoggingMessageNotification",
-            "notifications/progress": "#/components/schemas/ServerNotificationProgressNotification",
-            "notifications/prompts/list_changed": "#/components/schemas/ServerNotificationPromptListChangedNotification",
-            "notifications/resources/list_changed": "#/components/schemas/ServerNotificationResourceListChangedNotification",
-            "notifications/resources/updated": "#/components/schemas/ServerNotificationResourceUpdatedNotification",
-            "notifications/tools/list_changed": "#/components/schemas/ServerNotificationToolListChangedNotification"
-          }
-        }
-      },
-      "ServerNotificationCancelledNotification": {
-        "properties": {
-          "Method": {
-            "enum": [
-              "notifications/cancelled"
-            ],
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "params": {
-            "type": "object",
-            "properties": {
-              "requestId": { },
-              "reason": {
-                "type": "string",
-                "nullable": true
-              },
-              "_meta": {
-                "$ref": "#/components/schemas/JsonObject"
-              }
-            }
-          }
-        }
-      },
-      "ServerNotificationLoggingMessageNotification": {
-        "properties": {
-          "Method": {
-            "enum": [
-              "notifications/message"
-            ],
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "params": {
-            "type": "object",
-            "properties": {
-              "level": {
-                "$ref": "#/components/schemas/LoggingLevel"
-              },
-              "logger": {
-                "type": "string",
-                "nullable": true
-              },
-              "data": {
-                "$ref": "#/components/schemas/NullableOfJsonElement"
-              },
-              "_meta": {
-                "$ref": "#/components/schemas/JsonObject"
-              }
-            }
-          }
-        }
-      },
-      "ServerNotificationProgressNotification": {
-        "properties": {
-          "Method": {
-            "enum": [
-              "notifications/progress"
-            ],
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "params": {
-            "type": "object",
-            "properties": {
-              "_meta": {
-                "$ref": "#/components/schemas/JsonObject"
-              },
-              "progressToken": { },
-              "progress": {
-                "type": "object",
-                "properties": {
-                  "progress": {
-                    "type": "number",
-                    "format": "float",
-                    "nullable": true
-                  },
-                  "total": {
-                    "type": "number",
-                    "format": "float",
-                    "nullable": true
-                  },
-                  "message": {
-                    "type": "string",
-                    "nullable": true
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "ServerNotificationPromptListChangedNotification": {
-        "properties": {
-          "Method": {
-            "enum": [
-              "notifications/prompts/list_changed"
-            ],
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "params": {
-            "type": "object",
-            "properties": {
-              "_meta": {
-                "$ref": "#/components/schemas/JsonObject"
-              }
-            }
-          }
-        }
-      },
-      "ServerNotificationResourceListChangedNotification": {
-        "properties": {
-          "Method": {
-            "enum": [
-              "notifications/resources/list_changed"
-            ],
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "params": {
-            "type": "object",
-            "properties": {
-              "_meta": {
-                "$ref": "#/components/schemas/JsonObject"
-              }
-            }
-          }
-        }
-      },
-      "ServerNotificationResourceUpdatedNotification": {
-        "properties": {
-          "Method": {
-            "enum": [
-              "notifications/resources/updated"
-            ],
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "params": {
-            "type": "object",
-            "properties": {
-              "uri": {
-                "type": "string",
-                "nullable": true
-              },
-              "_meta": {
-                "$ref": "#/components/schemas/JsonObject"
-              }
-            }
-          }
-        }
-      },
-      "ServerNotificationToolListChangedNotification": {
-        "properties": {
-          "Method": {
-            "enum": [
-              "notifications/tools/list_changed"
-            ],
-            "type": "string"
-          },
-          "method": {
-            "type": "string"
-          },
-          "params": {
-            "type": "object",
-            "properties": {
-              "_meta": {
-                "$ref": "#/components/schemas/JsonObject"
-              }
-            }
           }
         }
       },

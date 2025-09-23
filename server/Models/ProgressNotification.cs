@@ -7,7 +7,7 @@ namespace PureHttpTransport.Models;
 /// <summary>
 /// An out-of-band notification used to inform the receiver of a progress update for a long-running request.
 /// </summary>
-public sealed class ProgressNotification : ServerNotification
+public sealed class ProgressNotification : IServerNotification, IClientNotification
 {
     /// <summary>
     /// Always "notifications/progress"

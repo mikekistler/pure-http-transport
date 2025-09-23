@@ -8,7 +8,7 @@ namespace PureHttpTransport.Models;
 /// This notification indicates that the result will be unused, so any associated processing SHOULD cease.
 /// A client MUST NOT attempt to cancel its `initialize` request.
 /// </summary>
-public sealed class CancelledNotification : ServerNotification
+public sealed class CancelledNotification : IServerNotification, IClientNotification
 {
     /// <summary>
     /// Always "notifications/cancelled"

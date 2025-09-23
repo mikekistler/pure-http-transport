@@ -5,7 +5,7 @@ namespace PureHttpTransport.Models;
 /// <summary>
 /// Notification of a log message passed from server to client. If no logging/setLevel request has been sent from the client, the server MAY decide which messages to send automatically.
 /// </summary>
-public sealed class LoggingMessageNotification : ServerNotification
+public sealed class LoggingMessageNotification : IServerNotification
 {
     /// <summary>
     /// Always "notifications/message"

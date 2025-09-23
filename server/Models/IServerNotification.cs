@@ -15,4 +15,4 @@ namespace PureHttpTransport.Models;
 [JsonDerivedType(typeof(ResourceListChangedNotification), "notifications/resources/list_changed")]
 [JsonDerivedType(typeof(ResourceUpdatedNotification), "notifications/resources/updated")]
 [JsonDerivedType(typeof(ToolListChangedNotification), "notifications/tools/list_changed")]
-public abstract class ServerNotification { }
+public interface IServerNotification { }
