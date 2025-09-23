@@ -1,0 +1,1058 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "PureHttpMcpServer | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/completions": {
+      "post": {
+        "tags": [
+          "Completions"
+        ],
+        "summary": "Create a completion (demo implementation)",
+        "operationId": "CreateCompletion",
+        "parameters": [
+          {
+            "name": "Mcp-Request-Id",
+            "in": "header",
+            "description": "The unique request ID for tracking purposes",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The completion request parameters",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteRequestParams"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/initialize": {
+      "post": {
+        "tags": [
+          "Initialization"
+        ],
+        "summary": "Initialize the MCP session and return server capabilities",
+        "operationId": "Initialize",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitializeRequestParams"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitializeResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logLevel": {
+      "post": {
+        "tags": [
+          "Logging"
+        ],
+        "operationId": "SetLogLevel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetLevelRequestParams"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Get server notifications (groups)",
+        "operationId": "GetNotifications",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServerNotification"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Acknowledge a previously received group of notifications",
+        "operationId": "AcknowledgeNotifications",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/ping": {
+      "get": {
+        "tags": [
+          "Ping"
+        ],
+        "summary": "Ping the server; returns 202 Accepted to indicate reachability",
+        "operationId": "Ping",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/prompts": {
+      "get": {
+        "tags": [
+          "Prompts"
+        ],
+        "summary": "List available prompts",
+        "operationId": "ListPrompts",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/prompts/{name}": {
+      "post": {
+        "tags": [
+          "Prompts"
+        ],
+        "summary": "Get and render a named prompt",
+        "operationId": "GetPrompt",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/requests": {
+      "get": {
+        "tags": [
+          "Requests"
+        ],
+        "summary": "Get server-initiated requests (one at a time)",
+        "operationId": "GetServerRequests",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/resources": {
+      "get": {
+        "tags": [
+          "Resources"
+        ],
+        "operationId": "ListResources",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Resources"
+        ],
+        "operationId": "ReadResource",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/resources/subscribe": {
+      "post": {
+        "tags": [
+          "Resources"
+        ],
+        "operationId": "SubscribeResource",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/resources/unsubscribe": {
+      "post": {
+        "tags": [
+          "Resources"
+        ],
+        "operationId": "UnsubscribeResource",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/resources/templates": {
+      "get": {
+        "tags": [
+          "Resources"
+        ],
+        "operationId": "ListResourceTemplates",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/tools": {
+      "get": {
+        "tags": [
+          "Tools"
+        ],
+        "summary": "Get all available tools",
+        "operationId": "ListTools",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListToolsResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/{name}/calls": {
+      "post": {
+        "tags": [
+          "Tools"
+        ],
+        "summary": "Invoke a tool call by name",
+        "operationId": "CallTool",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the tool to call",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Mcp-Request-Id",
+            "in": "header",
+            "description": "The unique request ID for tracking purposes",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallToolRequestParams"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallToolResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Argument": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "CallToolRequestParams": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "object",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "CallToolResult": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array"
+          },
+          "structuredContent": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "isError": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "ClientCapabilities": {
+        "type": "object",
+        "properties": {
+          "experimental": {
+            "type": "object",
+            "nullable": true
+          },
+          "roots": {
+            "$ref": "#/components/schemas/RootsCapability"
+          },
+          "sampling": {
+            "$ref": "#/components/schemas/SamplingCapability"
+          },
+          "elicitation": {
+            "$ref": "#/components/schemas/ElicitationCapability"
+          }
+        },
+        "nullable": true
+      },
+      "CompleteContext": {
+        "type": "object",
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
+      "CompleteRequestParams": {
+        "required": [
+          "ref",
+          "argument"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "$ref": "#/components/schemas/Reference"
+          },
+          "argument": {
+            "$ref": "#/components/schemas/Argument"
+          },
+          "context": {
+            "$ref": "#/components/schemas/CompleteContext"
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "CompleteResult": {
+        "type": "object",
+        "properties": {
+          "completion": {
+            "$ref": "#/components/schemas/Completion"
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "Completion": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "hasMore": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "CompletionsCapability": {
+        "type": "object",
+        "nullable": true
+      },
+      "ElicitationCapability": {
+        "type": "object",
+        "nullable": true
+      },
+      "Implementation": {
+        "required": [
+          "name",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "InitializeRequestParams": {
+        "required": [
+          "protocolVersion",
+          "clientInfo"
+        ],
+        "type": "object",
+        "properties": {
+          "protocolVersion": {
+            "type": "string"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/ClientCapabilities"
+          },
+          "clientInfo": {
+            "$ref": "#/components/schemas/Implementation"
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        },
+        "nullable": true
+      },
+      "InitializeResult": {
+        "required": [
+          "protocolVersion",
+          "capabilities",
+          "serverInfo"
+        ],
+        "type": "object",
+        "properties": {
+          "protocolVersion": {
+            "type": "string"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/ServerCapabilities"
+          },
+          "serverInfo": {
+            "$ref": "#/components/schemas/Implementation"
+          },
+          "instructions": {
+            "type": "string",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "JsonElement": { },
+      "JsonNode": {
+        "nullable": true
+      },
+      "JsonObject": {
+        "type": "object",
+        "nullable": true
+      },
+      "ListToolsResult": {
+        "type": "object",
+        "properties": {
+          "tools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tool"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "LoggingCapability": {
+        "type": "object",
+        "nullable": true
+      },
+      "LoggingLevel": {
+        "enum": [
+          "debug",
+          "info",
+          "notice",
+          "warning",
+          "error",
+          "critical",
+          "alert",
+          "emergency"
+        ]
+      },
+      "NullableOfJsonElement": {
+        "nullable": true
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PromptsCapability": {
+        "type": "object",
+        "properties": {
+          "listChanged": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
+      "Reference": { },
+      "ResourcesCapability": {
+        "type": "object",
+        "properties": {
+          "subscribe": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "listChanged": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
+      "RootsCapability": {
+        "type": "object",
+        "properties": {
+          "listChanged": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
+      "SamplingCapability": {
+        "type": "object",
+        "nullable": true
+      },
+      "ServerCapabilities": {
+        "type": "object",
+        "properties": {
+          "experimental": {
+            "type": "object",
+            "nullable": true
+          },
+          "logging": {
+            "$ref": "#/components/schemas/LoggingCapability"
+          },
+          "prompts": {
+            "$ref": "#/components/schemas/PromptsCapability"
+          },
+          "resources": {
+            "$ref": "#/components/schemas/ResourcesCapability"
+          },
+          "tools": {
+            "$ref": "#/components/schemas/ToolsCapability"
+          },
+          "completions": {
+            "$ref": "#/components/schemas/CompletionsCapability"
+          }
+        }
+      },
+      "ServerNotification": {
+        "required": [
+          "Method"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/ServerNotificationCancelledNotification"
+          },
+          {
+            "$ref": "#/components/schemas/ServerNotificationLoggingMessageNotification"
+          },
+          {
+            "$ref": "#/components/schemas/ServerNotificationProgressNotification"
+          },
+          {
+            "$ref": "#/components/schemas/ServerNotificationPromptListChangedNotification"
+          },
+          {
+            "$ref": "#/components/schemas/ServerNotificationResourceListChangedNotification"
+          },
+          {
+            "$ref": "#/components/schemas/ServerNotificationResourceUpdatedNotification"
+          },
+          {
+            "$ref": "#/components/schemas/ServerNotificationToolListChangedNotification"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "Method",
+          "mapping": {
+            "notifications/cancelled": "#/components/schemas/ServerNotificationCancelledNotification",
+            "notifications/message": "#/components/schemas/ServerNotificationLoggingMessageNotification",
+            "notifications/progress": "#/components/schemas/ServerNotificationProgressNotification",
+            "notifications/prompts/list_changed": "#/components/schemas/ServerNotificationPromptListChangedNotification",
+            "notifications/resources/list_changed": "#/components/schemas/ServerNotificationResourceListChangedNotification",
+            "notifications/resources/updated": "#/components/schemas/ServerNotificationResourceUpdatedNotification",
+            "notifications/tools/list_changed": "#/components/schemas/ServerNotificationToolListChangedNotification"
+          }
+        }
+      },
+      "ServerNotificationCancelledNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/cancelled"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "requestId": { },
+              "reason": {
+                "type": "string",
+                "nullable": true
+              },
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "ServerNotificationLoggingMessageNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/message"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "level": {
+                "$ref": "#/components/schemas/LoggingLevel"
+              },
+              "logger": {
+                "type": "string",
+                "nullable": true
+              },
+              "data": {
+                "$ref": "#/components/schemas/NullableOfJsonElement"
+              },
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "ServerNotificationProgressNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/progress"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              },
+              "progressToken": { },
+              "progress": {
+                "type": "object",
+                "properties": {
+                  "progress": {
+                    "type": "number",
+                    "format": "float",
+                    "nullable": true
+                  },
+                  "total": {
+                    "type": "number",
+                    "format": "float",
+                    "nullable": true
+                  },
+                  "message": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ServerNotificationPromptListChangedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/prompts/list_changed"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "ServerNotificationResourceListChangedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/resources/list_changed"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "ServerNotificationResourceUpdatedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/resources/updated"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string",
+                "nullable": true
+              },
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "ServerNotificationToolListChangedNotification": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "notifications/tools/list_changed"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "SetLevelRequestParams": {
+        "required": [
+          "level"
+        ],
+        "type": "object",
+        "properties": {
+          "level": {
+            "$ref": "#/components/schemas/LoggingLevel"
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "Tool": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "inputSchema": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "outputSchema": {
+            "$ref": "#/components/schemas/NullableOfJsonElement"
+          },
+          "annotations": {
+            "$ref": "#/components/schemas/ToolAnnotations"
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "ToolAnnotations": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "destructiveHint": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "idempotentHint": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "openWorldHint": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "readOnlyHint": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
+      "ToolsCapability": {
+        "type": "object",
+        "properties": {
+          "listChanged": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Completions"
+    },
+    {
+      "name": "Initialization"
+    },
+    {
+      "name": "Logging"
+    },
+    {
+      "name": "Notifications"
+    },
+    {
+      "name": "Ping"
+    },
+    {
+      "name": "Prompts"
+    },
+    {
+      "name": "Requests"
+    },
+    {
+      "name": "Resources"
+    },
+    {
+      "name": "Tools"
+    }
+  ]
+}
