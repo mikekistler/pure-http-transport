@@ -52,7 +52,7 @@ public static class InitializeEndpoints
             return TypedResults.Ok<InitializeResult>(result);
         })
         .WithName("Initialize")
-        .WithSummary("Initialize the MCP session and return server capabilities");
+        .WithDescription("Initialize the MCP session and return server capabilities");
 
         return app;
     }

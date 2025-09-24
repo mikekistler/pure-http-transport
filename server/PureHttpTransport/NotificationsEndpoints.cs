@@ -73,7 +73,7 @@ public static class NotificationsEndpoints
             return TypedResults.Ok(Array.Empty<IServerNotification>());
         })
         .WithName("GetNotifications")
-        .WithSummary("Get server notifications (groups)");
+        .WithDescription("Get server notifications (groups)");
 
         // POST /notifications to send notifications from client to server and acknowledge a group
         notifications.MapPost("/", Accepted (
@@ -119,7 +119,7 @@ public static class NotificationsEndpoints
             return TypedResults.Accepted("about:blank");
         })
         .WithName("AcknowledgeNotifications")
-        .WithSummary("Acknowledge a previously received group of notifications");
+        .WithDescription("Acknowledge a previously received group of notifications");
 
         // Internal helper to enqueue a group of notifications (for tests)
         app.MapPost("/internal/enqueueNotifications", (List<IServerNotification> items) =>

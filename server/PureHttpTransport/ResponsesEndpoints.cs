@@ -77,7 +77,7 @@ public static class ResponsesEndpoints
             }
         })
         .WithName("ResponsesEndpoint")
-        .WithSummary("Receive client responses to server requests");
+        .WithDescription("Receive client responses to server requests");
 
         return app;
     }

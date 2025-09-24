@@ -38,7 +38,7 @@ public static class CompletionsEndpoints
             return TypedResults.Ok<CompleteResult>(result);
         })
         .WithName("CreateCompletion")
-        .WithSummary("Create a completion (demo implementation)");
+        .WithDescription("Create a completion (demo implementation)");
 
         return app;
     }

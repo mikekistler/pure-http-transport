@@ -10,7 +10,7 @@
         "tags": [
           "Completions"
         ],
-        "summary": "Create a completion (demo implementation)",
+        "description": "Create a completion (demo implementation)",
         "operationId": "CreateCompletion",
         "parameters": [
           {
@@ -57,7 +57,7 @@
         "tags": [
           "Initialization"
         ],
-        "summary": "Initialize the MCP session and return server capabilities",
+        "description": "Initialize the MCP session and return server capabilities",
         "operationId": "Initialize",
         "parameters": [
           {
@@ -141,7 +141,7 @@
         "tags": [
           "Notifications"
         ],
-        "summary": "Get server notifications (groups)",
+        "description": "Get server notifications (groups)",
         "operationId": "GetNotifications",
         "responses": {
           "200": {
@@ -163,7 +163,7 @@
         "tags": [
           "Notifications"
         ],
-        "summary": "Acknowledge a previously received group of notifications",
+        "description": "Acknowledge a previously received group of notifications",
         "operationId": "AcknowledgeNotifications",
         "parameters": [
           {
@@ -200,7 +200,7 @@
         "tags": [
           "Ping"
         ],
-        "summary": "Ping the server; returns 202 Accepted to indicate reachability",
+        "description": "Ping the server; returns 202 Accepted to indicate reachability",
         "operationId": "Ping",
         "parameters": [
           {
@@ -219,32 +219,13 @@
         "tags": [
           "Prompts"
         ],
-        "summary": "List available prompts",
+        "description": "List available prompts",
         "operationId": "ListPrompts",
         "parameters": [
           {
-            "$ref": "#/components/parameters/McpRequestId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/prompts/{name}": {
-      "post": {
-        "tags": [
-          "Prompts"
-        ],
-        "summary": "Get and render a named prompt",
-        "operationId": "GetPrompt",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
+            "name": "cursor",
+            "in": "query",
+            "description": "An opaque token representing the current pagination position. If provided, the server should return results starting after this cursor.",
             "schema": {
               "type": "string"
             }
@@ -255,7 +236,70 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPromptsResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/prompts/{name}": {
+      "post": {
+        "tags": [
+          "Prompts"
+        ],
+        "description": "Get and render a named prompt",
+        "operationId": "GetPrompt",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the prompt or prompt template",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
+        "requestBody": {
+          "description": "The parameters to get a prompt provided by a server.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetPromptRequestParams"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPromptResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -265,7 +309,7 @@
         "tags": [
           "Requests"
         ],
-        "summary": "Get server-initiated requests (one at a time)",
+        "description": "Get server-initiated requests (one at a time)",
         "operationId": "GetServerRequest",
         "responses": {
           "200": {
@@ -288,12 +332,30 @@
         "operationId": "ListResources",
         "parameters": [
           {
+            "name": "cursor",
+            "in": "query",
+            "description": "An opaque token representing the current pagination position. If provided, the server should return results starting after this cursor.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "$ref": "#/components/parameters/McpRequestId"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Resource"
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -303,9 +365,81 @@
         ],
         "description": "Read a resource with a specific resource URI.",
         "operationId": "ReadResource",
+        "requestBody": {
+          "description": "The parameters to get a resource provided by a server.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadResourceRequestParams"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadResourceResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/templates": {
+      "get": {
+        "tags": [
+          "Resources"
+        ],
+        "description": "List all available resource templates.",
+        "operationId": "ListResourceTemplates",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "An opaque token representing the current pagination position. If provided, the server should return results starting after this cursor.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceTemplate"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -317,9 +451,40 @@
         ],
         "description": "Subscribe to changes for a specific resource URI.",
         "operationId": "SubscribeResource",
+        "requestBody": {
+          "description": "The parameters to subscribe to a resource provided by a server.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscribeRequestParams"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
-            "description": "OK"
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -331,23 +496,39 @@
         ],
         "description": "Unsubscribe from changes for a specific resource URI.",
         "operationId": "UnsubscribeResource",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsubscribeRequestParams"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/resources/templates": {
-      "get": {
-        "tags": [
-          "Resources"
-        ],
-        "description": "List available resource templates.",
-        "operationId": "ListResourceTemplates",
-        "responses": {
-          "200": {
-            "description": "OK"
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -357,7 +538,7 @@
         "tags": [
           "Responses"
         ],
-        "summary": "Receive client responses to server requests",
+        "description": "Receive client responses to server requests",
         "operationId": "ResponsesEndpoint",
         "responses": {
           "200": {
@@ -371,9 +552,17 @@
         "tags": [
           "Tools"
         ],
-        "summary": "Get all available tools",
+        "description": "Get all available tools",
         "operationId": "ListTools",
         "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "An opaque token representing the current pagination position. If provided, the server should return results starting after this cursor.",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/McpRequestId"
           }
@@ -397,7 +586,7 @@
         "tags": [
           "Tools"
         ],
-        "summary": "Invoke a tool call by name",
+        "description": "Invoke a tool call by name",
         "operationId": "CallTool",
         "parameters": [
           {
@@ -450,6 +639,29 @@
   },
   "components": {
     "schemas": {
+      "Annotations": {
+        "type": "object",
+        "properties": {
+          "audience": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            },
+            "nullable": true
+          },
+          "priority": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "lastModified": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "nullable": true
+      },
       "Argument": {
         "type": "object",
         "properties": {
@@ -585,9 +797,46 @@
         "type": "object",
         "nullable": true
       },
+      "ContentBlock": { },
       "ElicitationCapability": {
         "type": "object",
         "nullable": true
+      },
+      "GetPromptRequestParams": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "arguments": {
+            "type": "object",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "GetPromptResult": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptMessage"
+            }
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
       },
       "IClientNotification": {
         "required": [
@@ -962,6 +1211,24 @@
         "type": "object",
         "nullable": true
       },
+      "ListPromptsResult": {
+        "type": "object",
+        "properties": {
+          "prompts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Prompt"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
       "ListToolsResult": {
         "type": "object",
         "properties": {
@@ -1025,6 +1292,69 @@
           }
         }
       },
+      "Prompt": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "arguments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromptArgument"
+            },
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "PromptArgument": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "required": {
+            "type": "boolean",
+            "nullable": true
+          }
+        }
+      },
+      "PromptMessage": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "$ref": "#/components/schemas/ContentBlock"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        }
+      },
       "PromptsCapability": {
         "type": "object",
         "properties": {
@@ -1035,7 +1365,70 @@
         },
         "nullable": true
       },
+      "ReadResourceRequestParams": {
+        "required": [
+          "uri"
+        ],
+        "type": "object",
+        "properties": {
+          "uri": {
+            "type": "string"
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "ReadResourceResult": {
+        "type": "object",
+        "properties": {
+          "contents": {
+            "type": "array"
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
       "Reference": { },
+      "Resource": {
+        "required": [
+          "name",
+          "uri"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "uri": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "annotations": {
+            "$ref": "#/components/schemas/Annotations"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
       "ResourcesCapability": {
         "type": "object",
         "properties": {
@@ -1049,6 +1442,45 @@
           }
         },
         "nullable": true
+      },
+      "ResourceTemplate": {
+        "required": [
+          "name",
+          "uriTemplate"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "uriTemplate": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "annotations": {
+            "$ref": "#/components/schemas/Annotations"
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "Role": {
+        "enum": [
+          "user",
+          "assistant"
+        ]
       },
       "RootsCapability": {
         "type": "object",
@@ -1096,6 +1528,18 @@
         "properties": {
           "level": {
             "$ref": "#/components/schemas/LoggingLevel"
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "SubscribeRequestParams": {
+        "type": "object",
+        "properties": {
+          "uri": {
+            "type": "string",
+            "nullable": true
           },
           "_meta": {
             "$ref": "#/components/schemas/JsonObject"
@@ -1165,6 +1609,18 @@
           }
         },
         "nullable": true
+      },
+      "UnsubscribeRequestParams": {
+        "type": "object",
+        "properties": {
+          "uri": {
+            "type": "string",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
       }
     },
     "parameters": {

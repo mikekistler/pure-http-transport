@@ -21,15 +21,18 @@ public static class ToolsEndpoints
         // "tools/list"
         toolsGroup.MapGet("/", ListTools)
             .WithName("ListTools")
-            .WithSummary("Get all available tools");
+            .WithDescription("Get all available tools");
 
         // "tools/call"
         toolsGroup.MapPost("/{name}/calls", CallTool)
             .WithName("CallTool")
-            .WithSummary("Invoke a tool call by name");
+            .WithDescription("Invoke a tool call by name");
     }
 
-    private static ListToolsResult ListTools()
+    private static ListToolsResult ListTools(
+        [Description("An opaque token representing the current pagination position. If provided, the server should return results starting after this cursor.")]
+        string? cursor
+    )
     {
         var options = new JsonSerializerOptions(JsonSerializerOptions.Web){
             RespectNullableAnnotations = true,

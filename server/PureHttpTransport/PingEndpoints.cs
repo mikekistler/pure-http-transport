@@ -12,7 +12,7 @@ public static class PingEndpoints
 
         ping.MapGet("/", () => TypedResults.Accepted("about:blank"))
             .WithName("Ping")
-            .WithSummary("Ping the server; returns 202 Accepted to indicate reachability");
+            .WithDescription("Ping the server; returns 202 Accepted to indicate reachability");
 
         return app;
     }

@@ -6,156 +6,111 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System;
+using System.ComponentModel;
+
+using PureHttpMcpServer.Resources;
+using ModelContextProtocol.Protocol;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace PureHttpTransport;
 
 public static class ResourcesEndpoints
 {
-    private class ResourceItem
-    {
-        public string Id { get; init; } = Guid.NewGuid().ToString();
-        public string Name { get; init; } = string.Empty;
-        public string ContentType { get; init; } = "text/plain";
-        public byte[] Data { get; init; } = Array.Empty<byte>();
-    }
-
-    private static readonly ConcurrentDictionary<string, ResourceItem> _resources = new();
-    private static readonly ConcurrentDictionary<string, bool> _subscriptions = new();
-
-    private static readonly string[] _templates = new[] { "default", "summary", "detailed" };
-
     public static IEndpointRouteBuilder MapResourcesEndpoints(this IEndpointRouteBuilder app)
     {
         var resources = app.MapGroup("/resources").WithTags("Resources");
         resources.AddEndpointFilter<ProtocolVersionFilter>();
 
         // List resources
-        resources.MapGet("/", () =>
+        resources.MapGet("/", (
+            [Description("An opaque token representing the current pagination position. If provided, the server should return results starting after this cursor.")]
+            string? cursor
+        ) =>
         {
-            var list = _resources.Values.Select(r => new { id = r.Id, name = r.Name, contentType = r.ContentType }).ToArray();
-            return Results.Json(list);
+            return TypedResults.Ok(MockResources.ListResources());
         })
         .WithName("ListResources")
         .WithDescription("List all available resources.");
 
-        // Read a resource
-        resources.MapPost("/", async (HttpRequest req) =>
+        // List resource templates
+        resources.MapGet("/templates", (
+            [Description("An opaque token representing the current pagination position. If provided, the server should return results starting after this cursor.")]
+            string? cursor
+        ) =>
         {
-            // Expect body like { id: "..." }
-            Dictionary<string, object>? body = null;
-            try
+            return TypedResults.Ok(MockResources.ListResourceTemplates());
+        })
+        .WithName("ListResourceTemplates")
+        .WithDescription("List all available resource templates.");
+
+        // Read a resource
+        resources.MapPost("/", Results<Ok<ReadResourceResult>, BadRequest<ProblemDetails>, NotFound<ProblemDetails>> (
+            [Description("The parameters to get a resource provided by a server.")]
+            ReadResourceRequestParams requestParams
+        ) =>
+        {
+            if (requestParams == null || string.IsNullOrEmpty(requestParams.Uri))
             {
-                body = await req.ReadFromJsonAsync<Dictionary<string, object>>();
-            }
-            catch
-            {
-                // ignore
+                return TypedResults.BadRequest<ProblemDetails>(new() { Detail = "Missing URI" });
             }
 
-            if (body == null || !body.TryGetValue("id", out var idObj) || idObj == null)
-            {
-                return Results.BadRequest(new { error = "Missing id" });
-            }
+            var contents = MockResources.GetResourceContents(requestParams.Uri);
 
-            var id = idObj.ToString()!;
-            if (!_resources.TryGetValue(id, out var resource))
+            if (contents == null)
             {
-                return Results.NotFound(new { error = "resource not found" });
+                return TypedResults.NotFound<ProblemDetails>(new() { Detail = "Resource not found" });
             }
-
-            // Return JSON with content as string (assume utf8 for tests)
-            var content = Encoding.UTF8.GetString(resource.Data);
-            return Results.Json(new { id = resource.Id, name = resource.Name, contentType = resource.ContentType, content = content });
+            var result = new ReadResourceResult()
+            {
+                Contents = contents
+            };
+            return TypedResults.Ok<ReadResourceResult>(result);
         })
         .WithName("ReadResource")
         .WithDescription("Read a resource with a specific resource URI.");
 
         // Subscribe to a resource
-        resources.MapPost("/subscribe", async (HttpRequest req) =>
+        resources.MapPost("/subscribe", Results<Accepted, BadRequest<ProblemDetails>, NotFound<ProblemDetails>> (
+            [Description("The parameters to subscribe to a resource provided by a server.")]
+            SubscribeRequestParams requestParams
+        ) =>
         {
-            Dictionary<string, object>? body = null;
-            try
+            if (requestParams == null || string.IsNullOrEmpty(requestParams.Uri))
             {
-                body = await req.ReadFromJsonAsync<Dictionary<string, object>>();
-            }
-            catch
-            {
+                return TypedResults.BadRequest<ProblemDetails>(new () { Detail = "Missing URI" });
             }
 
-            if (body == null || !body.TryGetValue("id", out var idObj) || idObj == null)
+            var resource = MockResources.GetResource(requestParams.Uri);
+            if (resource == null)
             {
-                return Results.BadRequest(new { error = "Missing id" });
+                return TypedResults.NotFound<ProblemDetails>(new () { Detail = "Resource not found" });
             }
 
-            var id = idObj.ToString()!;
-            if (!_resources.ContainsKey(id))
-            {
-                return Results.NotFound(new { error = "resource not found" });
-            }
-
-            _subscriptions[id] = true;
-            return Results.Accepted();
+            return TypedResults.Accepted("about:blank");
         })
         .WithName("SubscribeResource")
         .WithDescription("Subscribe to changes for a specific resource URI.");
 
         // Unsubscribe
-        resources.MapPost("/unsubscribe", async (HttpRequest req) =>
+        resources.MapPost("/unsubscribe", Results<Accepted, BadRequest<ProblemDetails>, NotFound<ProblemDetails>>(
+            UnsubscribeRequestParams requestParams) =>
         {
-            Dictionary<string, object>? body = null;
-            try
+            if (requestParams == null || string.IsNullOrEmpty(requestParams.Uri))
             {
-                body = await req.ReadFromJsonAsync<Dictionary<string, object>>();
-            }
-            catch
-            {
+                return TypedResults.BadRequest<ProblemDetails>(new () { Detail = "Missing URI" });
             }
 
-            if (body == null || !body.TryGetValue("id", out var idObj) || idObj == null)
+            var resource = MockResources.GetResource(requestParams.Uri);
+            if (resource == null)
             {
-                return Results.BadRequest(new { error = "Missing id" });
+                return TypedResults.NotFound<ProblemDetails>(new () { Detail = "Resource not found" });
             }
 
-            var id = idObj.ToString()!;
-            if (_subscriptions.TryRemove(id, out var _))
-            {
-                return Results.Accepted();
-            }
-            else
-            {
-                return Results.NotFound(new { error = "subscription not found" });
-            }
+            return TypedResults.Accepted("about:blank");
         })
         .WithName("UnsubscribeResource")
         .WithDescription("Unsubscribe from changes for a specific resource URI.");
-
-        // List templates
-        resources.MapGet("/templates", () => Results.Json(_templates))
-            .WithName("ListResourceTemplates")
-            .WithDescription("List available resource templates.");
-
-        // Internal helper to add a resource for tests
-        app.MapPost("/internal/addResource", async (HttpRequest req) =>
-        {
-            Dictionary<string, object>? body = null;
-            try
-            {
-                body = await req.ReadFromJsonAsync<Dictionary<string, object>>();
-            }
-            catch
-            {
-            }
-
-            var name = body != null && body.TryGetValue("name", out var n) ? n?.ToString() ?? string.Empty : string.Empty;
-            var content = body != null && body.TryGetValue("content", out var c) ? c?.ToString() ?? string.Empty : string.Empty;
-            var contentType = body != null && body.TryGetValue("contentType", out var ct) ? ct?.ToString() ?? "text/plain" : "text/plain";
-
-            var resource = new ResourceItem { Name = name, ContentType = contentType, Data = Encoding.UTF8.GetBytes(content) };
-            _resources[resource.Id] = resource;
-            return Results.Ok(new { id = resource.Id });
-        })
-        .WithName("AddResource")
-        .ExcludeFromDescription();
 
         return app;
     }
