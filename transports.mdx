@@ -429,7 +429,7 @@ The following table summarizes the endpoints provided by the MCP Server using th
 | /resources/unsubscribe | POST | resources/unsubscribe | UnsubscribeRequest.params (*) | 202: Accepted |
 | /responses           | POST   | _multiple_            | ClientResult | 202: Accepted |
 | /tools               | GET    | tools/list            |   | 200: ListToolsResult |
-| /tools/{name}/calls/{guid} | PUT | tools/call         | CallToolRequest.params (*) | 200: CallToolResult |
+| /tools/{name}/calls  | POST   | tools/call         | CallToolRequest.params (*) | 200: CallToolResult |
 
 (*): Includes the "_meta" property of "JSONRPCRequest".
 
@@ -469,6 +469,10 @@ considerable ambiguity and disagreement about the current session management fea
 Streamable HTTP transport, and until there is consensus on the meaning / purpose / behavior
 of sessions it is best to omit them from the Pure HTTP transport.
 
+In the absence of sessions, servers will use the authentication context to determine what server
+resources are appropriate to expose to the client. This is consistent with current RESTful services
+like databases – a request can access any data that the user is authorized to access.
+
 ### Backwards Compatibility
 
 Clients and servers can provide backwards compatibility with the Streamable HTTP transport
@@ -490,8 +494,6 @@ or the deprecated [HTTP+SSE transport](/specification/2024-11-05/basic/transport
    - If it fails with an HTTP 4xx status code (e.g., 405 Method Not Allowed or 404 Not
      Found), follow the steps described above to check for the Streamable HTTP transport
      or HTTP+SSE transport.
-
-<!-- Pure HTTP -->
 
 ## Custom Transports
 

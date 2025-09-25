@@ -7,6 +7,7 @@ public static class OpenApiTransformers
 {
     // List of operation IDs that represent request operations needing the Mcp-Request-Id header.
     static string[] requestOperations = ["CreateCompletion", "Initialize", "SetLogLevel", "Ping", "GetPrompt", "ListPrompts", "ListResources", "GetResource", "ListTools", "CallTool"];
+    static string[] listOperations = ["ListPrompts", "ListResources", "ListTools"];
 
     // An extension method to add the Mcp-Request-Id header to OpenAPI documentation.
     public static OpenApiOptions AddOpenApiTransformers(this OpenApiOptions options)
@@ -26,16 +27,22 @@ public static class OpenApiTransformers
             Description = "The unique request ID for tracking purposes",
             Schema = new OpenApiSchema { Type = "string", Format = "uuid" }
         };
+        // List operations may return an ETag header for caching purposes.
+        var etagHeader = new OpenApiHeader
+        {
+            Description = "The ETag for the current version of the resource",
+            Schema = new OpenApiSchema { Type = "string" }
+        };
         // Add the parameter and header to the OpenAPI document components.
         options.AddDocumentTransformer((document, context, cancellationToken) =>
-        {
-            document.Components ??= new OpenApiComponents();
-            document.Components.Parameters ??= new Dictionary<string, OpenApiParameter>();
-            document.Components.Parameters.Add("McpRequestId", parameter);
-            document.Components.Headers ??= new Dictionary<string, OpenApiHeader>();
-            document.Components.Headers.Add("McpRequestId", requestIdHeader);
-            return Task.CompletedTask;
-        });
+    {
+        document.Components ??= new OpenApiComponents();
+        document.Components.Parameters ??= new Dictionary<string, OpenApiParameter>();
+        document.Components.Parameters.Add("McpRequestId", parameter);
+        document.Components.Headers ??= new Dictionary<string, OpenApiHeader>();
+        document.Components.Headers.Add("McpRequestId", requestIdHeader);
+        return Task.CompletedTask;
+    });
         // And an operation transformer to add the Mcp-Request-Id header parameter to each request operation
         options.AddOperationTransformer((operation, context, cancellationToken) =>
         {
@@ -51,6 +58,17 @@ public static class OpenApiTransformers
                         Id = "McpRequestId"
                     }
                 });
+            }
+            return Task.CompletedTask;
+        });
+        // Add the ETag response header to the 200 responses of ListPrompts, ListResources, and ListTools
+        options.AddOperationTransformer((operation, context, cancellationToken) =>
+        {
+            if (listOperations.Contains(operation.OperationId))
+            {
+                var okResponse = operation.Responses.GetValueOrDefault("200")!;
+                okResponse.Headers ??= new Dictionary<string, OpenApiHeader>();
+                okResponse.Headers.Add("ETag", etagHeader);
             }
             return Task.CompletedTask;
         });
