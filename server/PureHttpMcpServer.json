@@ -49,7 +49,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/initialize": {
@@ -94,7 +102,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/logLevel": {
@@ -133,7 +149,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/notifications": {
@@ -143,6 +167,11 @@
         ],
         "description": "Get server notifications (groups)",
         "operationId": "GetNotifications",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -157,7 +186,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -172,6 +209,9 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/McpRequestId"
           }
         ],
         "requestBody": {
@@ -192,7 +232,15 @@
           "202": {
             "description": "Accepted"
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/ping": {
@@ -211,7 +259,15 @@
           "202": {
             "description": "Accepted"
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/prompts": {
@@ -239,10 +295,7 @@
             "description": "OK",
             "headers": {
               "ETag": {
-                "description": "The ETag for the current version of the resource",
-                "schema": {
-                  "type": "string"
-                }
+                "$ref": "#/components/headers/ETag"
               }
             },
             "content": {
@@ -253,7 +306,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/prompts/{name}": {
@@ -309,7 +370,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/requests": {
@@ -319,6 +388,11 @@
         ],
         "description": "Get server-initiated requests (one at a time)",
         "operationId": "GetServerRequest",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -328,7 +402,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/resources": {
@@ -356,10 +438,7 @@
             "description": "OK",
             "headers": {
               "ETag": {
-                "description": "The ETag for the current version of the resource",
-                "schema": {
-                  "type": "string"
-                }
+                "$ref": "#/components/headers/ETag"
               }
             },
             "content": {
@@ -373,7 +452,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -381,6 +468,11 @@
         ],
         "description": "Read a resource with a specific resource URI.",
         "operationId": "ReadResource",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "requestBody": {
           "description": "The parameters to get a resource provided by a server.",
           "content": {
@@ -423,7 +515,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/resources/templates": {
@@ -441,6 +541,9 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "$ref": "#/components/parameters/McpRequestId"
           }
         ],
         "responses": {
@@ -457,7 +560,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/resources/subscribe": {
@@ -467,6 +578,11 @@
         ],
         "description": "Subscribe to changes for a specific resource URI.",
         "operationId": "SubscribeResource",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "requestBody": {
           "description": "The parameters to subscribe to a resource provided by a server.",
           "content": {
@@ -502,7 +618,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/resources/unsubscribe": {
@@ -512,6 +636,11 @@
         ],
         "description": "Unsubscribe from changes for a specific resource URI.",
         "operationId": "UnsubscribeResource",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -546,7 +675,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/responses": {
@@ -556,11 +693,24 @@
         ],
         "description": "Receive client responses to server requests",
         "operationId": "ResponsesEndpoint",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/tools": {
@@ -588,10 +738,7 @@
             "description": "OK",
             "headers": {
               "ETag": {
-                "description": "The ETag for the current version of the resource",
-                "schema": {
-                  "type": "string"
-                }
+                "$ref": "#/components/headers/ETag"
               }
             },
             "content": {
@@ -602,7 +749,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/tools/{name}/calls": {
@@ -657,7 +812,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     }
   },
@@ -1664,6 +1827,27 @@
         "schema": {
           "type": "string",
           "format": "uuid"
+        }
+      },
+      "ETag": {
+        "description": "The ETag for the current version of the resource",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "securitySchemes": {
+      "OAuth2": {
+        "type": "oauth2",
+        "flows": {
+          "implicit": {
+            "authorizationUrl": "https://localhost:5001/connect/authorize",
+            "tokenUrl": "https://localhost:5001/connect/token",
+            "scopes": {
+              "api1": "Access API 1",
+              "api2": "Access API 2"
+            }
+          }
         }
       }
     }

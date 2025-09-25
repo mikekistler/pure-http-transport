@@ -9,10 +9,39 @@ public static class OpenApiTransformers
     static string[] requestOperations = ["CreateCompletion", "Initialize", "SetLogLevel", "Ping", "GetPrompt", "ListPrompts", "ListResources", "GetResource", "ListTools", "CallTool"];
     static string[] listOperations = ["ListPrompts", "ListResources", "ListTools"];
 
+    const string McpRequestIdParameterName = "McpRequestId";
+    const string McpRequestIdHeaderName = "McpRequestId";
+    const string ETagHeaderName = "ETag";
+
+    const string OAuth2SecuritySchemeName = "OAuth2";
+
     // An extension method to add the Mcp-Request-Id header to OpenAPI documentation.
     public static OpenApiOptions AddOpenApiTransformers(this OpenApiOptions options)
     {
-        // In requests, the Mcp-Request-Id header is documented as a header parameter.
+        // Add the Mcp-Request-Id header parameter, Mcp-Request-Id response header, and
+        // ETag response header to the OpenAPI document components.
+        options.AddDocumentTransformer(AddComponents);
+
+        // Add the Mcp-Request-Id header parameter to each request operation
+        options.AddOperationTransformer(AddRequestIdParameter);
+
+        // Add the ETag response header to the 200 responses of ListPrompts, ListResources, and ListTools
+        options.AddOperationTransformer(AddETagHeader);
+
+        // Add the Mcp-Request-Id response header to the 200 response of GetServerRequest
+        options.AddOperationTransformer(AddMcpRequestIdResponseHeader);
+
+        // Add security scheme definitions to the OpenAPI document components.
+        options.AddDocumentTransformer(AddSecuritySchemeDefinitions);
+
+        // Add the OAuth2 security requirement to all operations
+        options.AddOperationTransformer(AddSecurityRequirements);
+
+        return options;
+    }
+
+    private static Task AddComponents(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
+    {
         var parameter = new OpenApiParameter
         {
             Name = "Mcp-Request-Id",
@@ -21,75 +50,130 @@ public static class OpenApiTransformers
             Required = false,
             Schema = new OpenApiSchema { Type = "string", Format = "uuid" }
         };
+
         // In responses, the Mcp-Request-Id header is documented as a response header.
+
         var requestIdHeader = new OpenApiHeader
         {
             Description = "The unique request ID for tracking purposes",
             Schema = new OpenApiSchema { Type = "string", Format = "uuid" }
         };
+
         // List operations may return an ETag header for caching purposes.
+
         var etagHeader = new OpenApiHeader
         {
             Description = "The ETag for the current version of the resource",
             Schema = new OpenApiSchema { Type = "string" }
         };
-        // Add the parameter and header to the OpenAPI document components.
-        options.AddDocumentTransformer((document, context, cancellationToken) =>
-    {
+
         document.Components ??= new OpenApiComponents();
         document.Components.Parameters ??= new Dictionary<string, OpenApiParameter>();
-        document.Components.Parameters.Add("McpRequestId", parameter);
+        document.Components.Parameters.Add(McpRequestIdParameterName, parameter);
         document.Components.Headers ??= new Dictionary<string, OpenApiHeader>();
-        document.Components.Headers.Add("McpRequestId", requestIdHeader);
+        document.Components.Headers.Add(McpRequestIdHeaderName, requestIdHeader);
+        document.Components.Headers.Add(ETagHeaderName, etagHeader);
+
         return Task.CompletedTask;
-    });
-        // And an operation transformer to add the Mcp-Request-Id header parameter to each request operation
-        options.AddOperationTransformer((operation, context, cancellationToken) =>
+    }
+
+    private static Task AddRequestIdParameter(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
+    {
+        operation.Parameters ??= new List<OpenApiParameter>();
+        operation.Parameters.Add(new OpenApiParameter
         {
-            if (operation is not null && requestOperations.Contains(operation.OperationId))
+            Reference = new OpenApiReference
             {
-                // Add the Mcp-Request-Id header parameter to each operation.
-                operation.Parameters ??= new List<OpenApiParameter>();
-                operation.Parameters.Add(new OpenApiParameter
+                Type = ReferenceType.Parameter,
+                Id = McpRequestIdParameterName
+            }
+        });
+        return Task.CompletedTask;
+    }
+    private static Task AddETagHeader(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
+    {
+        if (listOperations.Contains(operation.OperationId))
+        {
+            var okResponse = operation.Responses.GetValueOrDefault("200")!;
+            okResponse.Headers ??= new Dictionary<string, OpenApiHeader>();
+            okResponse.Headers.Add("ETag", new OpenApiHeader
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.Header,
+                    Id = "ETag"
+                }
+            });
+        }
+        return Task.CompletedTask;
+    }
+
+    private static Task AddMcpRequestIdResponseHeader(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
+    {
+        if (operation.OperationId == "GetServerRequest")
+        {
+            var okResponse = operation.Responses.GetValueOrDefault("200")!;
+            okResponse.Headers ??= new Dictionary<string, OpenApiHeader>();
+            okResponse.Headers.Add("McpRequestId", new OpenApiHeader
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.Header,
+                    Id = "McpRequestId"
+                }
+            });
+        }
+        return Task.CompletedTask;
+    }
+
+    private static Task AddSecuritySchemeDefinitions(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
+    {
+        var identityUrl = "https://localhost:5001";
+        var scopes = new Dictionary<string, string>
+        {
+            { "api1", "Access API 1" },
+            { "api2", "Access API 2" }
+        };
+        var securityScheme = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.OAuth2,
+            Flows = new OpenApiOAuthFlows()
+            {
+                // TODO: Change this to use Authorization Code flow with PKCE
+                Implicit = new OpenApiOAuthFlow()
+                {
+                    AuthorizationUrl = new Uri($"{identityUrl}/connect/authorize"),
+                    TokenUrl = new Uri($"{identityUrl}/connect/token"),
+                    Scopes = scopes,
+                }
+            }
+        };
+        document.Components ??= new();
+        document.Components.SecuritySchemes.Add(OAuth2SecuritySchemeName, securityScheme);
+        return Task.CompletedTask;
+    }
+
+    private static Task AddSecurityRequirements(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
+    {
+        operation.Security ??= new List<OpenApiSecurityRequirement>();
+
+        var securityRequirement = new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
                 {
                     Reference = new OpenApiReference
                     {
-                        Type = ReferenceType.Parameter,
-                        Id = "McpRequestId"
+                        Type = ReferenceType.SecurityScheme,
+                        Id = OAuth2SecuritySchemeName
                     }
-                });
+                },
+                new List<string> { "api1", "api2" } // Scopes required for this operation
             }
-            return Task.CompletedTask;
-        });
-        // Add the ETag response header to the 200 responses of ListPrompts, ListResources, and ListTools
-        options.AddOperationTransformer((operation, context, cancellationToken) =>
-        {
-            if (listOperations.Contains(operation.OperationId))
-            {
-                var okResponse = operation.Responses.GetValueOrDefault("200")!;
-                okResponse.Headers ??= new Dictionary<string, OpenApiHeader>();
-                okResponse.Headers.Add("ETag", etagHeader);
-            }
-            return Task.CompletedTask;
-        });
-        // Add the Mcp-Request-Id response header to the 200 response of GetServerRequest
-        options.AddOperationTransformer((operation, context, cancellationToken) =>
-        {
-            if (operation.OperationId == "GetServerRequest")
-            {
-                var okResponse = operation.Responses.GetValueOrDefault("200")!;
-                okResponse.Headers ??= new Dictionary<string, OpenApiHeader>();
-                okResponse.Headers.Add("McpRequestId", new OpenApiHeader
-                {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.Header,
-                        Id = "McpRequestId"
-                    }
-                });
-            }
-            return Task.CompletedTask;
-        });
-        return options;
+        };
+
+        operation.Security.Add(securityRequirement);
+
+        return Task.CompletedTask;
     }
 }
