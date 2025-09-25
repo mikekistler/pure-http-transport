@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Schema;
 using System.ComponentModel;
 using Microsoft.AspNetCore.Http.HttpResults;
+using PureHttpMcpServer.Tools;
 
 namespace PureHttpTransport;
 
@@ -19,141 +20,48 @@ public static class ToolsEndpoints
         toolsGroup.AddEndpointFilter<ProtocolVersionFilter>();
 
         // "tools/list"
-        toolsGroup.MapGet("/", ListTools)
-            .WithName("ListTools")
-            .WithDescription("Get all available tools");
+        toolsGroup.MapGet("/", Ok<ListToolsResult> (
+            [Description("An opaque token representing the current pagination position. If provided, the server should return results starting after this cursor.")]
+            string? cursor
+        ) =>
+        {
+            var tools = MockTools.ListTools();
+
+            var result = new ListToolsResult
+            {
+                Meta = new JsonObject
+                {
+                    ["totalTools"] = tools.Count
+                },
+                NextCursor = string.Empty,
+                Tools = tools
+            };
+
+            return TypedResults.Ok(result);
+        })
+        .WithName("ListTools")
+        .WithDescription("Get all available tools");
 
         // "tools/call"
-        toolsGroup.MapPost("/{name}/calls", CallTool)
-            .WithName("CallTool")
-            .WithDescription("Invoke a tool call by name");
-    }
+        toolsGroup.MapPost("/{name}/calls", Results<Ok<CallToolResult>, BadRequest<ProblemDetails>> (
+            [Description("The name of the tool to call")] string name,
 
-    private static ListToolsResult ListTools(
-        [Description("An opaque token representing the current pagination position. If provided, the server should return results starting after this cursor.")]
-        string? cursor
-    )
-    {
-        var options = new JsonSerializerOptions(JsonSerializerOptions.Web){
-            RespectNullableAnnotations = true,
-            RespectRequiredConstructorParameters = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        };
-        var inputSchema = options.GetJsonSchemaAsNode(typeof(GetCurrentWeatherInput));
-        var outputSchema = options.GetJsonSchemaAsNode(typeof(GetCurrentWeatherOutput));
-        var tools = new List<Tool>
+            [FromBody] CallToolRequestParams requestParams
+        ) =>
         {
-            new Tool
+            // Basic validation
+            if (string.IsNullOrEmpty(name))
             {
-                Meta = new JsonObject (),
-                Name = "getCurrentWeather",
-                Title = "Get Current Weather",
-                Description = "Get the current weather in a given location",
-                InputSchema = inputSchema != null ? JsonDocument.Parse(inputSchema.ToJsonString()).RootElement : default,
-                OutputSchema = outputSchema != null ? JsonDocument.Parse(outputSchema.ToJsonString()).RootElement : default,
-                Annotations = new ToolAnnotations
+                return TypedResults.BadRequest<ProblemDetails>(new()
                 {
-                    Title = "Get Current Weather Tool",
-                    ReadOnlyHint = true,
-                    OpenWorldHint = true
-                }
-            }
-        };
-
-        var result = new ListToolsResult
-        {
-            Meta = new JsonObject
-            {
-                ["totalTools"] = tools.Count
-            },
-            NextCursor = string.Empty,
-            Tools = tools
-        };
-
-        return result;
-    }
-
-    private static Results<Ok<CallToolResult>, BadRequest<ProblemDetails>> CallTool(
-        [Description("The name of the tool to call")] string name,
-
-        [FromBody] CallToolRequestParams requestParams
-    )
-    {
-        // Basic validation
-        if (string.IsNullOrEmpty(name))
-        {
-            return TypedResults.BadRequest<ProblemDetails>(new()
-            {
-                Detail = "tool name required"
-            });
-        }
-
-        // Dispatch to supported tools
-        switch (name)
-        {
-            case "getCurrentWeather":
-                return TypedResults.Ok<CallToolResult>(HandleGetCurrentWeather(requestParams.Arguments));
-            default:
-                return TypedResults.Ok<CallToolResult>(new CallToolResult
-                {
-                    IsError = true,
-                    Content = new List<ContentBlock> { new TextContentBlock { Text = $"unknown tool: {name}" } }
+                    Detail = "tool name required"
                 });
-        }
-    }
-
-    private static CallToolResult HandleGetCurrentWeather(IReadOnlyDictionary<string, JsonElement>? arguments)
-    {
-        string location = "Unknown";
-        string unit = "celsius";
-
-        if (arguments != null)
-        {
-            if (arguments.TryGetValue("location", out var locationElem) && locationElem.ValueKind == JsonValueKind.String)
-            {
-                location = locationElem.GetString() ?? "Unknown";
             }
-            if (arguments.TryGetValue("unit", out var unitElem) && unitElem.ValueKind == JsonValueKind.String)
-            {
-                unit = unitElem.GetString() ?? "celsius";
-            }
-        }
+            var result = MockTools.CallTool(name, requestParams);
 
-        // Fake weather for demonstration
-        var temp = unit == "fahrenheit" ? 68.0 : 20.0;
-
-        var structuredNode = new JsonObject
-        {
-            ["temperature"] = temp,
-            ["unit"] = unit,
-            ["description"] = $"Clear skies in {location}"
-        };
-
-        return new CallToolResult
-        {
-            Content = new List<ContentBlock> { new TextContentBlock { Text = (string)structuredNode["description"]! } as ContentBlock },
-            StructuredContent = structuredNode,
-            IsError = false
-        };
+            return TypedResults.Ok<CallToolResult>(result);
+        })
+        .WithName("CallTool")
+        .WithDescription("Invoke a tool call by name");
     }
-}
-
-// --- POCO for schema generation ---
-
-public class GetCurrentWeatherInput
-{
-    /// <summary>The city and state, e.g. San Francisco, CA</summary>
-    public string Location { get; set; } = string.Empty;
-    /// <summary>The unit of temperature, either 'celsius' or 'fahrenheit'</summary>
-    public string? Unit { get; set; }
-}
-
-public class GetCurrentWeatherOutput
-{
-    /// <summary>The current temperature</summary>
-    public double Temperature { get; set; }
-    /// <summary>The unit of temperature, either 'celsius' or 'fahrenheit'</summary>
-    public string Unit { get; set; } = string.Empty;
-    /// <summary>A brief description of the current weather</summary>
-    public string Description { get; set; } = string.Empty;
 }
