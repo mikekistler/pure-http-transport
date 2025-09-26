@@ -9,3 +9,18 @@ Accept: application/json
 Mcp-Protocol-Version: 2025-06-18
 
 ###
+
+GET {{HostAddress}}/tools
+Mcp-Protocol-Version: 2025-06-18
+Accept: application/json
+
+###
+
+POST {{HostAddress}}/tools/get_current_weather/calls
+Mcp-Protocol-Version: 2025-06-18
+Content-Type: application/json
+Accept: application/json
+
+{
+    "name": "getCurrentWeather"
+}

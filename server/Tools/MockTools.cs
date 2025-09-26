@@ -11,13 +11,8 @@ public static class MockTools
 {
     public static List<Tool> ListTools()
     {
-        var options = new JsonSerializerOptions(JsonSerializerOptions.Web){
-            RespectNullableAnnotations = true,
-            RespectRequiredConstructorParameters = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        };
-        var inputSchema = options.GetJsonSchemaAsNode(typeof(GetCurrentWeatherInput));
-        var outputSchema = options.GetJsonSchemaAsNode(typeof(GetCurrentWeatherOutput));
+        var inputSchema = GetSchema(typeof(GetCurrentWeatherInput));
+        var outputSchema = GetSchema(typeof(GetCurrentWeatherOutput));
         var result = new List<Tool>
         {
             new Tool
@@ -26,8 +21,8 @@ public static class MockTools
                 Name = "getCurrentWeather",
                 Title = "Get Current Weather",
                 Description = "Get the current weather in a given location",
-                InputSchema = inputSchema != null ? JsonDocument.Parse(inputSchema.ToJsonString()).RootElement : default,
-                OutputSchema = outputSchema != null ? JsonDocument.Parse(outputSchema.ToJsonString()).RootElement : default,
+                InputSchema = inputSchema ?? default,
+                OutputSchema = outputSchema ?? default,
                 Annotations = new ToolAnnotations
                 {
                     Title = "Get Current Weather Tool",
@@ -40,6 +35,23 @@ public static class MockTools
         return result;
     }
 
+    static JsonSerializerOptions options = new JsonSerializerOptions(JsonSerializerOptions.Web)
+    {
+        RespectNullableAnnotations = true,
+        RespectRequiredConstructorParameters = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+    static JsonSchemaExporterOptions exporterOptions = new JsonSchemaExporterOptions
+    {
+        TreatNullObliviousAsNonNullable = true
+    };
+    private static JsonElement? GetSchema(Type type)
+    {
+        var schemaAsNode = JsonSchemaExporter.GetJsonSchemaAsNode(options, type, exporterOptions);
+        if (schemaAsNode == null) return null;
+        var schemaAsElement = JsonDocument.Parse(schemaAsNode.ToJsonString()).RootElement;
+        return schemaAsElement;
+    }
     public static CallToolResult CallTool(string name, CallToolRequestParams requestParams)
     {
         // Dispatch to supported tools
