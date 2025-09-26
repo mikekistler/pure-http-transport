@@ -63,6 +63,20 @@ public class CliApplication
         readResourceCommand.SetHandler(ReadResourceCommandHandler, resourceUriArg);
         resourcesCommand.Add(readResourceCommand);
 
+        // Subscribe to resource command
+        var subscribeResourceCommand = new Command("subscribe", "Subscribe to a resource");
+        var subscribeResourceUriArg = new Argument<string>("uri", "Resource URI to subscribe to");
+        subscribeResourceCommand.AddArgument(subscribeResourceUriArg);
+        subscribeResourceCommand.SetHandler(SubscribeResourceCommandHandler, subscribeResourceUriArg);
+        resourcesCommand.Add(subscribeResourceCommand);
+
+        // Unsubscribe from resource command
+        var unsubscribeResourceCommand = new Command("unsubscribe", "Unsubscribe from a resource");
+        var unsubscribeResourceUriArg = new Argument<string>("uri", "Resource URI to unsubscribe from");
+        unsubscribeResourceCommand.AddArgument(unsubscribeResourceUriArg);
+        unsubscribeResourceCommand.SetHandler(UnsubscribeResourceCommandHandler, unsubscribeResourceUriArg);
+        resourcesCommand.Add(unsubscribeResourceCommand);
+
         rootCommand.Add(resourcesCommand);
 
         // Prompts commands
@@ -280,6 +294,48 @@ public class CliApplication
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Failed to read resource: {ex.Message}");
+        }
+    }
+
+    private async Task SubscribeResourceCommandHandler(string uri)
+    {
+        try
+        {
+            Console.WriteLine($"Subscribing to resource '{uri}'...");
+            var success = await _mcpClient.SubscribeResourceAsync(uri);
+            if (success)
+            {
+                Console.WriteLine("✅ Successfully subscribed to resource.");
+            }
+            else
+            {
+                Console.WriteLine("❌ Failed to subscribe to resource.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error subscribing to resource: {ex.Message}");
+        }
+    }
+
+    private async Task UnsubscribeResourceCommandHandler(string uri)
+    {
+        try
+        {
+            Console.WriteLine($"Unsubscribing from resource '{uri}'...");
+            var success = await _mcpClient.UnsubscribeResourceAsync(uri);
+            if (success)
+            {
+                Console.WriteLine("✅ Successfully unsubscribed from resource.");
+            }
+            else
+            {
+                Console.WriteLine("❌ Failed to unsubscribe from resource.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error unsubscribing from resource: {ex.Message}");
         }
     }
 
