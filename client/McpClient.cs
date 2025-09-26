@@ -116,7 +116,7 @@ public class McpClient
                 url += $"?cursor={Uri.EscapeDataString(cursor)}";
             }
 
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync((global::System.String)"resources");
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<ListResourcesResult>(_jsonOptions);
