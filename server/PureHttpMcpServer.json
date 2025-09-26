@@ -444,10 +444,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Resource"
-                  }
+                  "$ref": "#/components/schemas/ListResourcesResult"
                 }
               }
             }
@@ -552,10 +549,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ResourceTemplate"
-                  }
+                  "$ref": "#/components/schemas/ListResourceTemplatesResult"
                 }
               }
             }
@@ -1405,6 +1399,42 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Prompt"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "ListResourcesResult": {
+        "type": "object",
+        "properties": {
+          "resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "ListResourceTemplatesResult": {
+        "type": "object",
+        "properties": {
+          "resourceTemplates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceTemplate"
             }
           },
           "nextCursor": {

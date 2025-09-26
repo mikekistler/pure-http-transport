@@ -28,7 +28,13 @@ public static class ResourcesEndpoints
             string? cursor
         ) =>
         {
-            return TypedResults.Ok(MockResources.ListResources());
+            var resourceList = MockResources.ListResources().ToList();
+            var result = new ListResourcesResult()
+            {
+                Resources = resourceList,
+                NextCursor = null
+            };
+            return TypedResults.Ok(result);
         })
         .WithName("ListResources")
         .WithDescription("List all available resources.");
@@ -39,7 +45,13 @@ public static class ResourcesEndpoints
             string? cursor
         ) =>
         {
-            return TypedResults.Ok(MockResources.ListResourceTemplates());
+            var templates = MockResources.ListResourceTemplates().ToList();
+            var result = new ListResourceTemplatesResult()
+            {
+                ResourceTemplates = templates,
+                NextCursor = null
+            };
+            return TypedResults.Ok(result);
         })
         .WithName("ListResourceTemplates")
         .WithDescription("List all available resource templates.");
