@@ -1,17 +1,22 @@
 using ModelContextProtocol.Protocol;
 using System.ComponentModel;
+using System.Text.Json.Nodes;
 
 namespace PureHttpMcpServer.Resources;
 
 public static class MockResources
 {
+    // Track subscriptions: resource URI -> set of subscribers (for demo, just a HashSet)
+    private static readonly HashSet<string> _subscribedUris = new();
+
     private static List<Resource> _resources = [
         new Resource()
         {
             Uri = "test://static/resource/1",
             Name = "Static Resource 1",
             MimeType = "text/plain",
-            Description = "This is a static plaintext resource"
+            Description = "This is a static plaintext resource",
+            Meta = new JsonObject()
         }
     ];
 
@@ -21,14 +26,16 @@ public static class MockResources
             UriTemplate = "test://text/resource/{id}",
             Name = "Template Text Resource",
             Description = "A template resource with text content",
-            MimeType = "text/plain"
+            MimeType = "text/plain",
+            Meta = new JsonObject()
         },
         new ResourceTemplate()
         {
             UriTemplate = "test://blob/resource/{id}",
             Name = "Template Blob Resource",
             Description = "A template resource with blob content",
-            MimeType = "application/octet-stream"
+            MimeType = "application/octet-stream",
+            Meta = new JsonObject()
         }
     ];
 
@@ -50,6 +57,30 @@ public static class MockResources
     public static ResourceTemplate? GetResourceTemplate(string uri)
     {
         return _resourceTemplates.FirstOrDefault(t => uri.StartsWith(t.UriTemplate.Split('{')[0]));
+    }
+
+    public static bool SubscribeToResource(string uri)
+    {
+        lock (_subscribedUris)
+        {
+            return _subscribedUris.Add(uri); // returns true if newly subscribed
+        }
+    }
+
+    public static bool UnsubscribeToResource(string uri)
+    {
+        lock (_subscribedUris)
+        {
+            return _subscribedUris.Remove(uri); // returns true if was subscribed
+        }
+    }
+
+    internal static HashSet<string> Subscriptions()
+    {
+        lock (_subscribedUris)
+        {
+            return (HashSet<string>)_subscribedUris.ToHashSet();
+        }
     }
 
     public static List<ResourceContents>? GetResourceContents(string uri)

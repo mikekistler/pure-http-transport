@@ -93,10 +93,10 @@ public static class ResourcesEndpoints
                 return TypedResults.BadRequest<ProblemDetails>(new () { Detail = "Missing URI" });
             }
 
-            var resource = MockResources.GetResource(requestParams.Uri);
-            if (resource == null)
+            var result = MockResources.SubscribeToResource(requestParams.Uri);
+            if (!result)
             {
-                return TypedResults.NotFound<ProblemDetails>(new () { Detail = "Resource not found" });
+                return TypedResults.NotFound<ProblemDetails>(new() { Detail = "Resource not found" });
             }
 
             return TypedResults.Accepted("about:blank");
@@ -113,8 +113,8 @@ public static class ResourcesEndpoints
                 return TypedResults.BadRequest<ProblemDetails>(new () { Detail = "Missing URI" });
             }
 
-            var resource = MockResources.GetResource(requestParams.Uri);
-            if (resource == null)
+            var result = MockResources.UnsubscribeToResource(requestParams.Uri);
+            if (!result)
             {
                 return TypedResults.NotFound<ProblemDetails>(new () { Detail = "Resource not found" });
             }

@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.HttpLogging;
-
+using PureHttpMcpServer.Resources;
 using PureHttpTransport;
 using PureHttpTransport.OpenApiExtensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+// Register the background service
+builder.Services.AddHostedService<MockNotifications>();
 
 builder.Services.AddProblemDetails();
 

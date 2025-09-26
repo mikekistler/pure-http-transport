@@ -16,20 +16,17 @@ namespace PureHttpTransport;
 
 public static class NotificationsEndpoints
 {
-    private class NotificationGroup
+    private class NotificationGroup(List<IServerNotification> items)
     {
         public string Id { get; init; } = Guid.NewGuid().ToString();
-        public List<IServerNotification> Items { get; init; } = new List<IServerNotification>();
-        public DateTime? PendingSince { get; set; }
-        public string State { get; set; } = "active"; // active, pending, completed
+        public List<IServerNotification> Items { get; init; } = items;
+        public DateTimeOffset? PendingSince { get; init; } = System.DateTimeOffset.UtcNow;
     }
 
     // These fields manage the state of notification groups:
-    // - _groups: all notification groups by ID (active, pending, or completed)
-    // - _activeQueue: queue of group IDs ready to be delivered to clients
+    // - _activeQueue: queue of notifications ready to be delivered to clients
     // - _pending: groups that have been delivered but not yet acknowledged
-    private static readonly ConcurrentDictionary<string, NotificationGroup> _groups = new();
-    private static readonly ConcurrentQueue<string> _activeQueue = new();
+    private static readonly ConcurrentQueue<IServerNotification> _activeQueue = new();
     private static readonly ConcurrentDictionary<string, NotificationGroup> _pending = new();
 
     // PendingTimeoutMilliseconds: how long (ms) a group can remain pending before being reactivated
@@ -44,6 +41,9 @@ public static class NotificationsEndpoints
         _reactivationTimer = new Timer(_ => ReactivatePending(), null, _reactivationInterval, _reactivationInterval);
     }
 
+    // Define a constant for the header name
+    const string McpGroupIdHeader = "Mcp-Group-Id";
+
     public static IEndpointRouteBuilder MapNotificationsEndpoints(this IEndpointRouteBuilder app)
     {
         var notifications = app.MapGroup("/notifications").WithTags("Notifications");
@@ -52,44 +52,43 @@ public static class NotificationsEndpoints
         // GET /notifications returns an array of notifications (may be empty)
         notifications.MapGet("/", Ok<IServerNotification[]> (HttpResponse response) =>
         {
-            // Dequeue a group if available
-            while (_activeQueue.TryDequeue(out var id))
+            // If there are any notifications ready to send, dequeue and return them
+            List<IServerNotification> notifications = new();
+            while (_activeQueue.TryDequeue(out var notification))
             {
-                if (_groups.TryGetValue(id, out var group) && group.State == "active")
-                {
-                    // Mark pending
-                    group.State = "pending";
-                    group.PendingSince = DateTime.UtcNow;
-                    _pending[id] = group;
-
-                    response.Headers["Mcp-Notifications-Group-Id"] = group.Id;
-                    response.Headers["MCP-Protocol-Version"] = "2025-06-18";
-
-                    return TypedResults.Ok(group.Items.ToArray());
-                }
+                notifications.Add(notification);
             }
 
-            // No group available: return empty array
-            return TypedResults.Ok(Array.Empty<IServerNotification>());
+            // Return an empty list if no notifications
+            if (notifications.Count == 0)
+            {
+                return TypedResults.Ok(Array.Empty<IServerNotification>());
+            }
+
+            // Create a notification group for this batch if we have any and add it to pending
+
+            var group = new NotificationGroup(notifications);
+            _pending[group.Id] = group;
+
+            // Send the notifications with the group ID in the header
+            response.Headers[McpGroupIdHeader] = group.Id;
+            return TypedResults.Ok(notifications.ToArray());
         })
         .WithName("GetNotifications")
         .WithDescription("Get server notifications (groups)");
 
         // POST /notifications to send notifications from client to server and acknowledge a group
+
         notifications.MapPost("/", Accepted (
             [Description("A collection of notifications being sent from client to server.")]
             IClientNotification[] notifications,
 
-            [FromHeader(Name = "Mcp-Group-Id")] string? groupId ) =>
+            [FromHeader(Name = McpGroupIdHeader)] string? groupId) =>
         {
             // First check for groupId to acknowledge previously sent notifications from server to client
             if (!string.IsNullOrEmpty(groupId))
             {
-                if (_pending.TryRemove(groupId, out var group))
-                {
-                    group.State = "completed";
-                    _groups.TryRemove(groupId, out _);
-                }
+                _pending.TryRemove(groupId, out var _);
             }
 
             // Process incoming notifications from client to server
@@ -124,15 +123,20 @@ public static class NotificationsEndpoints
         // Internal helper to enqueue a group of notifications (for tests)
         app.MapPost("/internal/enqueueNotifications", (List<IServerNotification> items) =>
         {
-            var group = new NotificationGroup { Items = items };
-            _groups[group.Id] = group;
-            _activeQueue.Enqueue(group.Id);
-            return Results.Ok(new { id = group.Id });
+            foreach (var item in items)
+            {
+                _activeQueue.Enqueue(item);
+            }
         })
         .WithName("EnqueueNotifications")
         .ExcludeFromDescription();
 
         return app;
+    }
+
+    public static void EnqueueNotification(IServerNotification notification)
+    {
+        _activeQueue.Enqueue(notification);
     }
 
     private static void ReactivatePending()
@@ -146,10 +150,10 @@ public static class NotificationsEndpoints
             {
                 if (_pending.TryRemove(id, out var removed))
                 {
-                    removed.State = "active";
-                    removed.PendingSince = null;
-                    _groups[id] = removed;
-                    _activeQueue.Enqueue(id);
+                    foreach (var item in removed.Items)
+                    {
+                        _activeQueue.Enqueue(item);
+                    }
                 }
             }
         }
