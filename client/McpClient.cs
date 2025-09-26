@@ -200,7 +200,7 @@ public class McpClient
     {
         try
         {
-            var response = await _httpClient.PostAsync("ping", null);
+            var response = await _httpClient.GetAsync("ping");
             response.EnsureSuccessStatusCode();
             return true;
         }
