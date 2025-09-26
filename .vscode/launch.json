@@ -2,18 +2,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (client, dotnet run -- --ping)",
+            "name": "PureHttpMcpClient",
             "type": "coreclr",
             "request": "launch",
             "program": "dotnet",
             "args": [
-                "run",
-                "--",
-                "ping"
+                "run"
             ],
             "cwd": "${workspaceFolder}/client",
             "stopAtEntry": false,
-            "console": "integratedTerminal"
+            "console": "externalTerminal"
         }
     ]
 }
