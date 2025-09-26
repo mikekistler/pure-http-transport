@@ -51,6 +51,29 @@ namespace PureHttpMcpClient
                                 Console.WriteLine("\n[Background] /notifications response:");
                                 Console.WriteLine(notifContent);
                             }
+
+                            // Acknowledge notifications
+                            // Get the Mcp-Group-ID header from the response
+                            if (notifResponse.Headers.TryGetValues("MCP-Group-ID", out var groupIds))
+                            {
+                                var groupId = groupIds.FirstOrDefault();
+                                if (!string.IsNullOrEmpty(groupId))
+                                {
+                                    // sent the groupId back in the MCP-Group-ID header to acknowledge
+                                    var request = new HttpRequestMessage(HttpMethod.Post, $"notifications");
+                                    request.Headers.Add("Mcp-Group-Id", groupId);
+                                    request.Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json");
+                                    var ackResponse = await _mcpClient.HttpClient.SendAsync(request, _cts.Token);
+                                    if (ackResponse.IsSuccessStatusCode)
+                                    {
+                                        Console.WriteLine($"[Background] Successfully acknowledged notifications with Group ID: {groupId}");
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"[Background] Failed to acknowledge notifications with Group ID: {groupId}. Status: {ackResponse.StatusCode}");
+                                    }
+                                }
+                            }
                         }
                     }
                     catch (Exception ex)

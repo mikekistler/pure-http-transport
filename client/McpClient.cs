@@ -41,7 +41,9 @@ public class McpClient
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("initialize", initParams, _jsonOptions);
+            var json = JsonSerializer.Serialize(initParams, _jsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("initialize", content);
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<InitializeResult>(_jsonOptions);
@@ -95,7 +97,9 @@ public class McpClient
                 Arguments = arguments
             };
 
-            var response = await _httpClient.PostAsJsonAsync($"tools/{toolName}/calls", requestParams, _jsonOptions);
+            var json = JsonSerializer.Serialize(requestParams, _jsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"tools/{toolName}/calls", content);
             response.EnsureSuccessStatusCode();
 
             return await response.Content.ReadFromJsonAsync<CallToolResult>(_jsonOptions);
@@ -139,7 +143,9 @@ public class McpClient
                 Uri = uri
             };
 
-            var response = await _httpClient.PostAsJsonAsync("resources", requestParams, _jsonOptions);
+            var json = JsonSerializer.Serialize(requestParams, _jsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("resources", content);
             response.EnsureSuccessStatusCode();
 
             return await response.Content.ReadFromJsonAsync<ReadResourceResult>(_jsonOptions);
@@ -185,7 +191,9 @@ public class McpClient
                 Arguments = arguments
             };
 
-            var response = await _httpClient.PostAsJsonAsync($"prompts/{name}", requestParams, _jsonOptions);
+            var json = JsonSerializer.Serialize(requestParams, _jsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"prompts/{name}", content);
             response.EnsureSuccessStatusCode();
 
             return await response.Content.ReadFromJsonAsync<GetPromptResult>(_jsonOptions);
@@ -208,6 +216,42 @@ public class McpClient
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Ping failed");
+            return false;
+        }
+    }
+
+    public async Task<bool> SubscribeResourceAsync(string uri)
+    {
+        try
+        {
+            var requestParams = new { Uri = uri };
+            var json = JsonSerializer.Serialize(requestParams, _jsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("resources/subscribe", content);
+            response.EnsureSuccessStatusCode();
+            return true;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to subscribe to resource {Uri}", uri);
+            return false;
+        }
+    }
+
+    public async Task<bool> UnsubscribeResourceAsync(string uri)
+    {
+        try
+        {
+            var requestParams = new { Uri = uri };
+            var json = JsonSerializer.Serialize(requestParams, _jsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("resources/unsubscribe", content);
+            response.EnsureSuccessStatusCode();
+            return true;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to unsubscribe to resource {Uri}", uri);
             return false;
         }
     }
