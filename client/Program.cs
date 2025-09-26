@@ -38,6 +38,12 @@ var rootCommand = new RootCommand("Pure HTTP MCP Client - A CLI client for Model
 var cliApp = host.Services.GetRequiredService<CliApplication>();
 cliApp.ConfigureCommands(rootCommand);
 
+
+// Start background poller
+var mcpClient = host.Services.GetRequiredService<McpClient>();
+var backgroundPoller = new BackgroundPoller(mcpClient);
+backgroundPoller.Start();
+
 // Gather top-level commands for tab completion
 var commandNames = rootCommand.Children
     .OfType<Command>()
@@ -72,6 +78,9 @@ while (true)
         Console.WriteLine($"Error: {ex.Message}");
     }
 }
+
+// Stop background poller
+await backgroundPoller.StopAsync();
 
 // Tab completion handler for ReadLine
 class SimpleAutoCompleteHandler : IAutoCompleteHandler

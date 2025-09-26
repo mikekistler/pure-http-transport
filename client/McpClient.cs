@@ -9,6 +9,7 @@ namespace PureHttpMcpClient;
 
 public class McpClient
 {
+    public HttpClient HttpClient => _httpClient;
     private readonly HttpClient _httpClient;
     private readonly ILogger<McpClient> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
