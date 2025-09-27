@@ -8,7 +8,7 @@ namespace PureHttpTransport;
 
 public class ProtocolVersionFilter : IEndpointFilter
 {
-    private const string HeaderName = "Mcp-Protocol-Version";
+    private const string HeaderName = PureHttpTransport.McpProtocolVersionHeader;
     private const string RequiredVersion = "2025-06-18";
 
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

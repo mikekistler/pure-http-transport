@@ -7,6 +7,7 @@ using System.Threading;
 using PureHttpTransport.Models;
 using System;
 using Microsoft.AspNetCore.Http.HttpResults;
+using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport;
 
@@ -17,15 +18,45 @@ public static class RequestsEndpoints
         public string Id { get; init; } = Guid.NewGuid().ToString();
         public IServerRequest request { get; init; } = request;
         public DateTime? PendingSince { get; set; } = null;
+        public TaskCompletionSource<Result> tcs = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
     }
+
+    // For async request/response correlation
+    private static readonly ConcurrentDictionary<string, TaskCompletionSource<Result>> _pendingResponses = new();
 
     // Storage
     private static readonly ConcurrentQueue<RequestEntry> _requestQueue = new();
-    private static readonly ConcurrentQueue<RequestEntry> _pendingQueue = new();
+    private static readonly ConcurrentDictionary<string, RequestEntry> _pending = new();
+    private static readonly ConcurrentQueue<string> _pendingQueue = new();
 
-    public static void EnqueueRequest(IServerRequest request)
+    public static async Task<Result> EnqueueRequestAsync(IServerRequest request)
     {
-        _requestQueue.Enqueue(new RequestEntry(request));
+        var entry = new RequestEntry(request);
+        _requestQueue.Enqueue(entry);
+        // Await the response
+        var response = await entry.tcs.Task;
+        _pendingResponses.TryRemove(entry.Id, out _);
+        return response;
+    }
+
+    public static async Task<ElicitResult> ElicitAsync(ElicitRequestParams requestParams, CancellationToken token = default)
+    {
+        var request = new ElicitRequest(requestParams);
+        var result = await EnqueueRequestAsync(request);
+        return result as ElicitResult ?? throw new InvalidOperationException("Expected ElicitResult");
+    }
+
+    // Call this when a response is received at /responses
+    public static bool HandleResponse(string requestId, Result result)
+    {
+        if (_pending.TryGetValue(requestId, out var entry))
+        {
+            // We should probably check the type of result matches the request type
+
+            entry.tcs.SetResult(result);
+            return true;
+        }
+        return false;
     }
 
     // Configurable timeout and timer for reactivation
@@ -50,11 +81,12 @@ public static class RequestsEndpoints
             if (_requestQueue.TryDequeue(out var entry))
             {
                 entry.PendingSince = DateTime.UtcNow;
-                _pendingQueue.Enqueue(entry);
+                _pending[entry.Id] = entry;
+                _pendingQueue.Enqueue(entry.Id);
 
                 // Set required headers
-                response.Headers["Mcp-Request-Id"] = entry.Id;
-                response.Headers["MCP-Protocol-Version"] = "2025-06-18";
+                response.Headers[PureHttpTransport.McpRequestIdHeader] = entry.Id;
+                response.Headers[PureHttpTransport.McpProtocolVersionHeader] = "2025-06-18";
 
                 return TypedResults.Ok<IServerRequest>(entry.request);
             }
@@ -70,22 +102,14 @@ public static class RequestsEndpoints
     private static void ReactivatePending()
     {
         var now = DateTime.UtcNow;
-        while (_pendingQueue.TryPeek(out var entry))
+
+        // Find all the entries in _pending that are stale, and re-enqueue them
+
+        var staleEntries = _pending.Where(kvp => kvp.Value.PendingSince.HasValue && (now - kvp.Value.PendingSince.Value).TotalMilliseconds > PendingTimeoutMilliseconds).ToList();
+        foreach (var kvp in staleEntries)
         {
-            if (entry.PendingSince.HasValue && (now - entry.PendingSince.Value).TotalMilliseconds > PendingTimeoutMilliseconds)
-            {
-                // Timeout exceeded, re-activate this request
-                if (_pendingQueue.TryDequeue(out var timedOutEntry))
-                {
-                    timedOutEntry.PendingSince = null;
-                    _requestQueue.Enqueue(timedOutEntry);
-                }
-            }
-            else
-            {
-                // The rest are still within the timeout
-                break;
-            }
+            kvp.Value.PendingSince = null;
+            _requestQueue.Enqueue(kvp.Value);
         }
     }
 

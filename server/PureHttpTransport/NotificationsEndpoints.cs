@@ -41,9 +41,6 @@ public static class NotificationsEndpoints
         _reactivationTimer = new Timer(_ => ReactivatePending(), null, _reactivationInterval, _reactivationInterval);
     }
 
-    // Define a constant for the header name
-    const string McpGroupIdHeader = "Mcp-Group-Id";
-
     public static IEndpointRouteBuilder MapNotificationsEndpoints(this IEndpointRouteBuilder app)
     {
         var notifications = app.MapGroup("/notifications").WithTags("Notifications");
@@ -71,7 +68,7 @@ public static class NotificationsEndpoints
             _pending[group.Id] = group;
 
             // Send the notifications with the group ID in the header
-            response.Headers[McpGroupIdHeader] = group.Id;
+            response.Headers[PureHttpTransport.McpGroupIdHeader] = group.Id;
             return TypedResults.Ok(notifications.ToArray());
         })
         .WithName("GetNotifications")
@@ -83,7 +80,7 @@ public static class NotificationsEndpoints
             [Description("A collection of notifications being sent from client to server.")]
             IClientNotification[] notifications,
 
-            [FromHeader(Name = McpGroupIdHeader)] string? groupId) =>
+            [FromHeader(Name = PureHttpTransport.McpGroupIdHeader)] string? groupId) =>
         {
             // First check for groupId to acknowledge previously sent notifications from server to client
             if (!string.IsNullOrEmpty(groupId))

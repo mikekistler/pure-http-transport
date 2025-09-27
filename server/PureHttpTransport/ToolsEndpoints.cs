@@ -9,6 +9,7 @@ using System.Text.Json.Schema;
 using System.ComponentModel;
 using Microsoft.AspNetCore.Http.HttpResults;
 using PureHttpMcpServer.Tools;
+using System.Threading.Tasks;
 
 namespace PureHttpTransport;
 
@@ -43,7 +44,7 @@ public static class ToolsEndpoints
         .WithDescription("Get all available tools");
 
         // "tools/call"
-        toolsGroup.MapPost("/{name}/calls", Results<Ok<CallToolResult>, BadRequest<ProblemDetails>> (
+        toolsGroup.MapPost("/{name}/calls", async Task<Results<Ok<CallToolResult>, BadRequest<ProblemDetails>>> (
             [Description("The name of the tool to call")] string name,
 
             [FromBody] CallToolRequestParams requestParams
@@ -57,7 +58,7 @@ public static class ToolsEndpoints
                     Detail = "tool name required"
                 });
             }
-            var result = MockTools.CallTool(name, requestParams);
+            var result = await MockTools.CallTool(name, requestParams);
 
             return TypedResults.Ok<CallToolResult>(result);
         })

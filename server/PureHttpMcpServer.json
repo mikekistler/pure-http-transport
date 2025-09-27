@@ -699,12 +699,42 @@
         "operationId": "ResponsesEndpoint",
         "parameters": [
           {
+            "name": "Mcp-Request-Id",
+            "in": "header",
+            "description": "The ID of the request being responded to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "$ref": "#/components/parameters/McpRequestId"
           }
         ],
+        "requestBody": {
+          "description": "The result of the request.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Result"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
-            "description": "OK"
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1918,6 +1948,14 @@
           "annotations": {
             "$ref": "#/components/schemas/Annotations"
           },
+          "_meta": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "Result": {
+        "type": "object",
+        "properties": {
           "_meta": {
             "$ref": "#/components/schemas/JsonObject"
           }

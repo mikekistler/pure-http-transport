@@ -44,7 +44,7 @@ public static class OpenApiTransformers
     {
         var parameter = new OpenApiParameter
         {
-            Name = "Mcp-Request-Id",
+            Name = PureHttpTransport.McpRequestIdHeader,
             In = ParameterLocation.Header,
             Description = "The unique request ID for tracking purposes",
             Required = false,

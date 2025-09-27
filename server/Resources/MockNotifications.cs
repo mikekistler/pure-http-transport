@@ -40,7 +40,7 @@ public class MockNotifications : BackgroundService
     private async Task UpdateExistingResourcesAsync(CancellationToken token)
     {
         var subscriptions = MockResources.Subscriptions();
-        _logger.LogInformation("Updating existing resources with current timestamp - {Count} subscriptions", subscriptions.Count);
+        _logger.LogDebug("Updating existing resources with current timestamp - {Count} subscriptions", subscriptions.Count);
 
         // Iterate through existing resources and update them
         foreach (var resource in MockResources.ListResources())

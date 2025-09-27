@@ -4,6 +4,10 @@ namespace PureHttpTransport;
 
 public static class PureHttpTransport
 {
+    public const string McpProtocolVersionHeader = "MCP-Protocol-Version";
+    public const string McpRequestIdHeader = "Mcp-Request-Id";
+    public const string McpGroupIdHeader = "Mcp-Group-Id";
+
     public static IEndpointRouteBuilder UsePureHttpTransport(this IEndpointRouteBuilder app)
     {
         app.MapCompletionsEndpoints();

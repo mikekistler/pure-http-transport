@@ -1,4 +1,5 @@
 using ModelContextProtocol.Protocol;
+using PureHttpTransport;
 using PureHttpTransport.Models;
 using System.ComponentModel;
 using System.Reflection.Metadata;
@@ -15,7 +16,7 @@ public static class MockTools
     public static List<Tool> ListTools()
     {
         var inputSchema = GetSchema(typeof(GetCurrentWeatherInput));
-        var outputSchema = GetSchema(typeof(GetCurrentWeatherOutput));
+        var outputSchema = GetSchema(typeof(GetCurrentWeatherResult));
         var result = new List<Tool>
         {
             new Tool
@@ -36,8 +37,8 @@ public static class MockTools
             new Tool
             {
                 Meta = new JsonObject (),
-                Name = "sendRequests",
-                Description = "A tool that sends requests to the client",
+                Name = "GuessTheNumber",
+                Description = "A simple game where the user has to guess a number between 1 and 10.",
                 Annotations = new ToolAnnotations
                 {
                     ReadOnlyHint = true,
@@ -66,15 +67,30 @@ public static class MockTools
         var schemaAsElement = JsonDocument.Parse(schemaAsNode.ToJsonString()).RootElement;
         return schemaAsElement;
     }
-    public static CallToolResult CallTool(string name, CallToolRequestParams requestParams)
+    public static async Task<CallToolResult> CallTool(string name, CallToolRequestParams requestParams)
     {
         // Dispatch to supported tools
         switch (name)
         {
             case "getCurrentWeather":
-                return HandleGetCurrentWeather(requestParams.Arguments);
-            case "sendRequests":
-                return HandleSendRequests(requestParams.Arguments);
+                {
+                    var result = GetCurrentWeather(requestParams.Arguments);
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock> { new TextContentBlock { Text = result.Description } as ContentBlock },
+                        StructuredContent = JsonSerializer.SerializeToNode(result, options),
+                        IsError = false
+                    };
+                }
+            case "GuessTheNumber":
+                {
+                    var result = await GuessTheNumber(requestParams.Arguments, default);
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock> { new TextContentBlock { Text = result } },
+                        IsError = false
+                    };
+                }
             default:
                 return new CallToolResult
                 {
@@ -84,7 +100,7 @@ public static class MockTools
         }
     }
 
-    private static CallToolResult HandleGetCurrentWeather(IReadOnlyDictionary<string, JsonElement>? arguments)
+    private static GetCurrentWeatherResult GetCurrentWeather(IReadOnlyDictionary<string, JsonElement>? arguments)
     {
         string location = "Unknown";
         string unit = "celsius";
@@ -104,24 +120,16 @@ public static class MockTools
         // Fake weather for demonstration
         var temp = unit == "fahrenheit" ? 68.0 : 20.0;
 
-        var structuredNode = new JsonObject
+        return new GetCurrentWeatherResult
         {
-            ["temperature"] = temp,
-            ["unit"] = unit,
-            ["description"] = $"Clear skies in {location}"
-        };
-
-        return new CallToolResult
-        {
-            Content = new List<ContentBlock> { new TextContentBlock { Text = (string)structuredNode["description"]! } as ContentBlock },
-            StructuredContent = structuredNode,
-            IsError = false
+            Temperature = temp,
+            Unit = unit,
+            Description = $"Clear skies in {location}"
         };
     }
 
-    private static CallToolResult HandleSendRequests(IReadOnlyDictionary<string, JsonElement>? arguments)
+    private static async Task<string> GuessTheNumber(IReadOnlyDictionary<string, JsonElement>? arguments, CancellationToken token)
     {
-
         // First ask the user if they want to play
         var playSchema = new RequestSchema
         {
@@ -131,15 +139,11 @@ public static class MockTools
             }
         };
 
-        var requestParams = new ElicitRequestParams
+        var playResponse = await RequestsEndpoints.ElicitAsync(new ElicitRequestParams
         {
             Message = "Do you want to play a game?",
             RequestedSchema = playSchema
-        };
-
-        var request = new ElicitRequest(requestParams);
-
-
+        }, token);
 
         // Check if user wants to play
         if (playResponse.Action != "accept" || playResponse.Content?["Answer"].ValueKind != JsonValueKind.True)
@@ -161,7 +165,7 @@ public static class MockTools
             }
         };
 
-        var nameResponse = await server.ElicitAsync(new ElicitRequestParams
+        var nameResponse = await RequestsEndpoints.ElicitAsync(new ElicitRequestParams
         {
             Message = "What is your name?",
             RequestedSchema = nameSchema
@@ -197,7 +201,7 @@ public static class MockTools
                 }
             };
 
-            var guessResponse = await server.ElicitAsync(new ElicitRequestParams
+            var guessResponse = await RequestsEndpoints.ElicitAsync(new ElicitRequestParams
             {
                 Message = message,
                 RequestedSchema = guessSchema
@@ -223,23 +227,6 @@ public static class MockTools
                 message = $"Your guess is too high! Try again (Attempt #{attempts}):";
             }
         }
-        int count = 1;
-
-        if (arguments != null)
-        {
-            if (arguments.TryGetValue("count", out var countElem) && countElem.ValueKind == JsonValueKind.Number)
-            {
-                count = countElem.GetInt32();
-            }
-        }
-
-        // In a real implementation, this would enqueue requests to be sent to the client.
-        // Here we just simulate success.
-        return new CallToolResult
-        {
-            Content = new List<ContentBlock> { new TextContentBlock { Text = $"Enqueued {count} requests to the client." } as ContentBlock },
-            IsError = false
-        };
     }
 }
 
@@ -253,7 +240,7 @@ public class GetCurrentWeatherInput
     public string? Unit { get; set; }
 }
 
-public class GetCurrentWeatherOutput
+public class GetCurrentWeatherResult
 {
     /// <summary>The current temperature</summary>
     public double Temperature { get; set; }
