@@ -13,6 +13,21 @@ namespace PureHttpTransport;
 
 public static class RequestsEndpoints
 {
+    // Configurable timeout and timer for reactivation
+    public static int PendingTimeoutMilliseconds = 30000; // default 30s
+    private static readonly Timer _reactivationTimer;
+    private static readonly TimeSpan _reactivationInterval = TimeSpan.FromMilliseconds(5000);
+
+    private static readonly ILogger _logger;
+
+    static RequestsEndpoints()
+    {
+        _logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("RequestsEndpoints");
+
+        // Start a timer to re-activate stale pending requests
+        _reactivationTimer = new Timer(_ => ReactivatePending(), null, _reactivationInterval, _reactivationInterval);
+    }
+
     private class RequestEntry(IServerRequest request)
     {
         public string Id { get; init; } = Guid.NewGuid().ToString();
@@ -51,23 +66,13 @@ public static class RequestsEndpoints
     {
         if (_pending.TryGetValue(requestId, out var entry))
         {
+            _pending.TryRemove(requestId, out _);
             // We should probably check the type of result matches the request type
 
             entry.tcs.SetResult(result);
             return true;
         }
         return false;
-    }
-
-    // Configurable timeout and timer for reactivation
-    public static int PendingTimeoutMilliseconds = 30000; // default 30s
-    private static readonly Timer _reactivationTimer;
-    private static readonly TimeSpan _reactivationInterval = TimeSpan.FromMilliseconds(5000);
-
-    static RequestsEndpoints()
-    {
-        // Start a timer to re-activate stale pending requests
-        _reactivationTimer = new Timer(_ => ReactivatePending(), null, _reactivationInterval, _reactivationInterval);
     }
 
     public static IEndpointRouteBuilder MapRequestsEndpoints(this IEndpointRouteBuilder app)
@@ -78,17 +83,20 @@ public static class RequestsEndpoints
         requests.MapGet("/", Results<Ok<IServerRequest>, NoContent> (HttpResponse response) =>
         {
             // Dequeue until we find an active request
-            if (_requestQueue.TryDequeue(out var entry))
+            while (_requestQueue.TryDequeue(out var entry))
             {
-                entry.PendingSince = DateTime.UtcNow;
-                _pending[entry.Id] = entry;
-                _pendingQueue.Enqueue(entry.Id);
+                if (!entry.tcs.Task.IsCompleted)
+                {
+                    entry.PendingSince = DateTime.UtcNow;
+                    _pending[entry.Id] = entry;
+                    _pendingQueue.Enqueue(entry.Id);
 
-                // Set required headers
-                response.Headers[PureHttpTransport.McpRequestIdHeader] = entry.Id;
-                response.Headers[PureHttpTransport.McpProtocolVersionHeader] = "2025-06-18";
+                    // Set required headers
+                    response.Headers[PureHttpTransport.McpRequestIdHeader] = entry.Id;
+                    response.Headers[PureHttpTransport.McpProtocolVersionHeader] = "2025-06-18";
 
-                return TypedResults.Ok<IServerRequest>(entry.request);
+                    return TypedResults.Ok<IServerRequest>(entry.request);
+                }
             }
 
             return TypedResults.NoContent();
@@ -108,6 +116,7 @@ public static class RequestsEndpoints
         var staleEntries = _pending.Where(kvp => kvp.Value.PendingSince.HasValue && (now - kvp.Value.PendingSince.Value).TotalMilliseconds > PendingTimeoutMilliseconds).ToList();
         foreach (var kvp in staleEntries)
         {
+            _logger.LogWarning($"Reactivating stale pending request {kvp.Key} after {(now - kvp.Value.PendingSince.Value).TotalMilliseconds}ms");
             kvp.Value.PendingSince = null;
             _requestQueue.Enqueue(kvp.Value);
         }

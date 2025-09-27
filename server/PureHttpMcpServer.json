@@ -1953,14 +1953,7 @@
           }
         }
       },
-      "Result": {
-        "type": "object",
-        "properties": {
-          "_meta": {
-            "$ref": "#/components/schemas/JsonObject"
-          }
-        }
-      },
+      "Result": { },
       "Role": {
         "enum": [
           "user",

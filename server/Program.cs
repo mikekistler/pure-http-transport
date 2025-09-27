@@ -31,6 +31,13 @@ builder.Services.AddHttpLogging(logging =>
     logging.CombineLogs = false;
 });
 
+
+// Register the custom ResultJsonConverter for minimal APIs
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts =>
+{
+    opts.SerializerOptions.Converters.Add(new ResultJsonConverter());
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
