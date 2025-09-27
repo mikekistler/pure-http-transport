@@ -307,7 +307,6 @@ The high-level mapping of MCP messages to HTTP is as follows:
 
 - "*/list" and "*/get" requests are mapped to HTTP GET requests.
   - Params are passed either in query string or headers
-- "tools/call" is mapped to HTTP PUT
 - All other requests are mapped to HTTP POST
 
 ### Security Warning
@@ -327,7 +326,7 @@ For each message sent from client to server:
 1. The client **MUST** issue an HTTP request with the method and path specified in the table below.
 2. The client **MUST** include the `MCP-Protocol-Version: <protocol-version>` header in the HTTP request to
 specify the protocol version of the message and any response to the message.
-2. For request messages using POST or PUT, the body of the HTTP request **MUST** be the "params" of the corresponding "Request" structure,
+2. For request messages using POST, the body of the HTTP request **MUST** be the "params" of the corresponding "Request" structure,
 specified in the table below, including the "_meta" property of "JSONRPCRequest".
 3. For request messages using GET, the "params" of the corresponding "Request" structure including the "_meta" property of "JSONRPCRequest",
 **MUST** be sent in headers, except the "cursor" parameter of "*/list" messages, which **MUST** be sent in the query string.
@@ -362,7 +361,7 @@ The following table provides a complete mapping from MCP message to HTTP Method 
 | resources/templates/list | GET  | /resources/templates |
 | resources/unsubscribe    | POST | /resources/unsubscribe |
 | tools/list               | GET  | /tools |
-| tools/call               | PUT  | /tools/{name}/calls/{guid} |
+| tools/call               | POST  | /tools/{name}/calls |
 | **Notifications**        | | |
 | notifications/cancelled          | POST | /notifications |
 | notifications/initialized        | POST | /notifications |

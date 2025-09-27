@@ -5,7 +5,7 @@
 **Status:** draft
 **Type:** Standards Track
 **Created:** 2025-09-08
-**Authors:** Jeffrey Richter, Mike Kistler
+**Authors:** Mike Kistler
 
 ## Abstract
 
@@ -16,20 +16,25 @@ scalable and efficient communication between MCP clients and servers using the m
 
 The HTTP protocol is widely adopted and supported across various platforms and programming languages, making it an ideal choice for a transport layer in the MCP ecosystem. HTTP was designed to be scalable, reliable, and efficient, which aligns well with the needs of enterprise MCP servers.
 
-Unlike local MCP Servers, remote MCP Servers are multi-tenant (accessed by multiple clients simultaneously). Remote MCP Servers must be scalable and fault tolerant and this is accomplished by creating a cluster of nodes running the MCP Server code with a load balancer that distributes incoming requests across the cluster. The Pure HTTP transport is designed to facilitate this architecture.
+Unlike local MCP Servers, remote MCP Servers are multi-tenant (accessed by multiple clients simultaneously). Enterprise MCP Servers must be scalable and fault tolerant and this is accomplished by creating a cluster of nodes running the MCP Server code with a load balancer that distributes incoming requests across the cluster. The Pure HTTP transport is designed to facilitate this architecture.
 
 ## Specification
 
 The complete technical specification for this SEP will be provided in a forthcoming PR. Here we provide an overview of the key design elements and decisions.
 
-The Pure HTTP transport for MCP will utilize standard HTTP methods (GET, POST, PUT, DELETE) to perform operations defined in the MCP protocol. Each MCP operation will be mapped to a specific HTTP endpoint, allowing clients to interact with the MCP server using standard HTTP requests.
+The Pure HTTP transport for MCP will utilize standard HTTP methods (GET, POST, DELETE) to perform operations defined in the MCP protocol. Each MCP operation will be mapped to a specific HTTP endpoint, allowing clients to interact with the MCP server using standard HTTP requests.
 
 The transport will also define a set of HTTP headers to convey metadata and control information necessary for MCP operations, such as authentication tokens, request identifiers, and content types.
 
 ### Schema changes
 
-The Pure HTTP transport will only flow the "payload" portion of the MCP messages over HTTP. This will require that message payload schemas be defined independently of the JSON-RPC message that is used in the STDIO and Streamable HTTP transports.
-These schema changes have already been proposed in [SEP-1319] and are simply included here by reference.
+The Pure HTTP transport will only flow the "payload" portion of the MCP messages over HTTP, without the JSON-RPC envelope.
+This means that the request and response bodies will directly contain the parameters and results of MCP operations,
+rather than being wrapped in a JSON-RPC structure. Some metadata from the JSON-RPC envelope may be conveyed using HTTP headers
+when needed.
+
+It would be helpful, though not strictly necessary, to modify the MCP schemas to separate the "payload" portion of each message
+from the JSON-RPC envelope. These schema changes have already been proposed in [SEP-1319].
 
 [SEP-1319]: https://github.com/modelcontextprotocol/modelcontextprotocol/issues/1319
 
@@ -62,46 +67,60 @@ Content-Type: application/json
 }
 ```
 
-### Mapping MCP Operations to HTTP Endpoints
+### HTTP Methods
 
-Each MCP operation (at the application layer) is mapped to a specific HTTP endpoint and method. The following sections provide the details of this mapping, but here we describe the general pattern for mapping MCP operations to HTTP requests.
+MCP list operations (e.g., `tools/list`) and the `ping` operation will use the HTTP GET method.
+Parameters for these operations will be passed either in headers or as query parameters in the URL
 
-MCP operations that retrieve data (e.g., `tools/list`, `resources/get`) will typically use the HTTP GET method, while operations that create or modify data (e.g., `tools/call`, `resources/create`) will use the HTTP POST or PUT methods as appropriate.
+MCP allows any request to contain a "_meta" property with arbitrary metadata for the request. For operations mapped to HTTP GET, "_meta" will be passed in headers, with one header per property in the "_meta" object. These headers will use a naming convention of "MCP-Meta-{property-name}" to allow the MCP Server to reconstruct the "_meta" object from the headers.
 
-Parameters to MCP operations mapped to HTTP GET requests will be passed as query parameters in the URL, while parameters for POST and PUT requests will be included in the request body as JSON.
+All other operations will use the HTTP POST method and pass parameters in the request body as JSON.
 
-Note that MCP allows any request to contain a "_meta" property with arbitrary metadata for the request. For operations that are mapped to HTTP PUT or POST requests, the "_meta" property will be included in the request body along with the other parameters. For operations mapped to HTTP GET requests, the "_meta" property will be passed in headers, with one header per property in the "_meta" object. These headers will use a naming convention of "MCP-Meta-{property-name}" to allow the MCP Server to reconstruct the "_meta" object from the headers.
+### HTTP Paths
 
-As in the Streamable HTTP transport, the Pure HTTP transport will use HTTP headers to convey certain protocol metadata, including:
+The HTTP paths for MCP operations will follow a consistent pattern based on the operation name. Each operation will be mapped to a specific endpoint, with the operation name used as the path.
+
+For example, the `tools/list` operation will be mapped to the `/tools` endpoint, while the `tools/call` operation will be mapped to the `/tools/{toolName}/calls` endpoint.
+
+The forthcoming PR will provide a complete mapping of MCP operations to HTTP paths.
+
+### HTTP Headers
+
+The Pure HTTP transport will use HTTP headers to convey certain protocol metadata, including:
 
 | Header Name               | Description                                      |
 |---------------------------|--------------------------------------------------|
-| MCP-Protocol-Version      | Indicates the version of the MCP protocol being used in the request.                        |
-| MCP-Session-ID            | Identifies the session associated with the request. |
+| Mcp-Protocol-Version      | Indicates the version of the MCP protocol being used in the request.                        |
+| Mcp-Request-Id            | A globally unique identifier for MCP request messages. |
+
+### Support for conditional requests
+
+All list operations (e.g., `tools/list`, `resources/list`, `prompts/list`) will return an `etag` header in the response. The MCP Client can later poll the MCP Server by issuing another GET request with `if-none-match: etag`; this returns 304-NotModified without the list if the list hasn’t changed, or returns 200-OK with the new list if the list has changed.
+
+Read operations that return a single resource (e.g., `resources/get`) will also return an `etag` header in the response. The MCP Client can later poll the MCP Server by issuing another GET request with `if-none-match: etag`; this returns 304-NotModified without the resource if it hasn’t changed, or returns 200-OK with the new resource if it has changed.
 
 ### Initialization
 
 The Pure HTTP transport will support an initialization step that allows the MCP Client to establish a session with the MCP Server. The "initialize" MCP operation is mapped to an HTTP POST request to the "/initialize" endpoint. The request body will contain a JSON object representing the `InitializeRequest` schema, and the response body will contain a JSON object representing the `InitializeResult` schema.
 
-### Tools
-
-#### tools/list
+### Tools List example
 
 A "tools/list" MCP request will be implemented as an HTTP GET request to the "/tools" endpoint. The `cursor` property of `ListToolsRequest.Params` will be passed as a query parameter named `cursor`. The response body will contain a JSON object representing the `ListToolsResult`.
-
-##### Example Request
 
 ```http
 GET /tools?cursor=abc123 HTTP/1.1
 Host: mcp.example.com
 Accept: application/json
+Mcp-Protocol-Version: 2025-06-18
+Mcp-Request-ID: 0605a86c-b88b-4e8c-ada4-2433eccb3d73
 ```
 
-##### Example Response
+The response body will contain a JSON object representing the `ListToolsResult`.
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+Etag: "def456"
 
 {
   "_meta": {
@@ -120,24 +139,26 @@ Content-Type: application/json
 }
 ```
 
-#### tools/call
+### Tool Call example
 
-A "tools/call" MCP request will be implemented as an HTTP PUT request to the "/tools/{toolName}/calls/{toolCallID}" endpoint. The body of the HTTP request will contain the JSON object representing the `params` field of the `ToolCallRequest`, without the `name` field since this is already specified in the URL path. The `toolCallID` will correspond to the `id` field of the JSON-RPC request. The response body will contain a JSON object representing the `ToolCallResult`.
-
-##### Example Request
+A "tools/call" MCP request will be implemented as an HTTP POST request to the "/tools/{toolName}/calls" endpoint. The body of the HTTP request will contain the JSON object representing the `params` field of the `ToolCallRequest`. The "name" field **SHOULD** be omitted from the body, since it is already specified in the URL path. If it is passed it will be ignored. The response body will contain a JSON object representing the `ToolCallResult`.
 
 ```http
-PUT /tools/get_weather/calls/42 HTTP/1.1
+POST /tools/get_weather/calls HTTP/1.1
 Host: mcp.example.com
-Accept: application/json
 Content-Type: application/json
+Accept: application/json
+Mcp-Protocol-Version: 2025-06-18
+Mcp-Request-ID: 0605a86c-b88b-4e8c-ada4-2433eccb3d73
 
 {
-  "location": "Seattle, WA"
+  "arguments": {
+    "location": "Seattle, WA"
+  }
 }
 ```
 
-##### Example Response
+The response body will contain a JSON object representing the `ToolCallResult`.
 
 ```http
 HTTP/1.1 200 OK
@@ -157,20 +178,6 @@ Content-Type: application/json
 }
 ```
 
-#### tools/list changed notification
-
-The response of the `tools/list` request will include an etag header. The MCP Client can later poll the MCP Server by issuing another GET request where if-none-match: etag; this returns 304-NotModified without the list if the list hasn’t changed, or returns 200-OK with the new list if the list has changed.
-
-### Resources
-
-#### resources/list
-
-#### resources/get
-
-GETting a binary resources can return raw bytes; base-64 encoding/decoding is no longer necessary simplifying code and reducing bandwidth. A GET on a large resource could also support the range request header allowing partial/resumable and concurrent GETs.
-
-### Prompts
-
 ## Rationale
 
 This section provides the rationale for design choices in the Pure HTTP Transport for MCP SEP that might be questioned. While the Pure HTTP transport specification follows the Streamable HTTP transport patterns where possible, there are intentional deviations to provide the scalability and reliability benefits of pure HTTP.
@@ -185,7 +192,7 @@ Because this is an additional transport layer, there are no backward compatibili
 
 ## Reference Implementation
 
-An initial reference implementation has been developed in Go. It is currently in a private repository and will be made publicly available once the SEP is finalized.
+An initial reference implementation has been developed in C#. It is currently in a private repository and will be made publicly available once the SEP is finalized.
 
 ## Future Considerations
 
