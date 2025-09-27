@@ -6,23 +6,27 @@ using System.Linq;
 using System.Threading;
 using PureHttpTransport.Models;
 using System;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace PureHttpTransport;
 
 public static class RequestsEndpoints
 {
-    private class RequestEntry
+    private class RequestEntry(IServerRequest request)
     {
         public string Id { get; init; } = Guid.NewGuid().ToString();
-        public object Body { get; init; } = new Dictionary<string, object>();
-        public DateTime? PendingSince { get; set; }
-        public string State { get; set; } = "active"; // active, pending, completed
+        public IServerRequest request { get; init; } = request;
+        public DateTime? PendingSince { get; set; } = null;
     }
 
     // Storage
-    private static readonly ConcurrentDictionary<string, RequestEntry> _store = new();
-    private static readonly ConcurrentQueue<string> _activeQueue = new();
-    private static readonly ConcurrentDictionary<string, RequestEntry> _pending = new();
+    private static readonly ConcurrentQueue<RequestEntry> _requestQueue = new();
+    private static readonly ConcurrentQueue<RequestEntry> _pendingQueue = new();
+
+    public static void EnqueueRequest(IServerRequest request)
+    {
+        _requestQueue.Enqueue(new RequestEntry(request));
+    }
 
     // Configurable timeout and timer for reactivation
     public static int PendingTimeoutMilliseconds = 30000; // default 30s
@@ -40,41 +44,25 @@ public static class RequestsEndpoints
         var requests = app.MapGroup("/requests").WithTags("Requests");
         requests.AddEndpointFilter<ProtocolVersionFilter>();
 
-        requests.MapGet("/", (HttpResponse response) =>
+        requests.MapGet("/", Results<Ok<IServerRequest>, NoContent> (HttpResponse response) =>
         {
             // Dequeue until we find an active request
-            while (_activeQueue.TryDequeue(out var id))
+            if (_requestQueue.TryDequeue(out var entry))
             {
-                if (_store.TryGetValue(id, out var entry) && entry.State == "active")
-                {
-                    // Mark pending
-                    entry.State = "pending";
-                    entry.PendingSince = DateTime.UtcNow;
-                    _pending[id] = entry;
+                entry.PendingSince = DateTime.UtcNow;
+                _pendingQueue.Enqueue(entry);
 
-                    // Set required headers
-                    response.Headers["Mcp-Request-Id"] = entry.Id;
-                    response.Headers["MCP-Protocol-Version"] = "2025-06-18";
+                // Set required headers
+                response.Headers["Mcp-Request-Id"] = entry.Id;
+                response.Headers["MCP-Protocol-Version"] = "2025-06-18";
 
-                    return Results.Json(entry.Body);
-                }
+                return TypedResults.Ok<IServerRequest>(entry.request);
             }
 
-            return Results.NoContent();
+            return TypedResults.NoContent();
         })
         .WithName("GetServerRequest")
         .WithDescription("Get server-initiated requests (one at a time)");
-
-        // Helper to enqueue server requests for tests or internal use
-        app.MapPost("/internal/enqueueRequest", (object body) =>
-        {
-            var entry = new RequestEntry { Body = body };
-            _store[entry.Id] = entry;
-            _activeQueue.Enqueue(entry.Id);
-            return Results.Ok(new { id = entry.Id });
-        })
-        .WithName("EnqueueRequest")
-        .ExcludeFromDescription();
 
         return app;
     }
@@ -82,20 +70,21 @@ public static class RequestsEndpoints
     private static void ReactivatePending()
     {
         var now = DateTime.UtcNow;
-        foreach (var kv in _pending.ToArray())
+        while (_pendingQueue.TryPeek(out var entry))
         {
-            var id = kv.Key;
-            var entry = kv.Value;
             if (entry.PendingSince.HasValue && (now - entry.PendingSince.Value).TotalMilliseconds > PendingTimeoutMilliseconds)
             {
-                // Move back to active
-                if (_pending.TryRemove(id, out var removed))
+                // Timeout exceeded, re-activate this request
+                if (_pendingQueue.TryDequeue(out var timedOutEntry))
                 {
-                    removed.State = "active";
-                    removed.PendingSince = null;
-                    _store[id] = removed;
-                    _activeQueue.Enqueue(id);
+                    timedOutEntry.PendingSince = null;
+                    _requestQueue.Enqueue(timedOutEntry);
                 }
+            }
+            else
+            {
+                // The rest are still within the timeout
+                break;
             }
         }
     }

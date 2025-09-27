@@ -400,7 +400,17 @@
               "McpRequestId": {
                 "$ref": "#/components/headers/McpRequestId"
               }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IServerRequest"
+                }
+              }
             }
+          },
+          "204": {
+            "description": "No Content"
           }
         },
         "security": [
@@ -1381,6 +1391,226 @@
                 "$ref": "#/components/schemas/JsonObject"
               }
             }
+          }
+        }
+      },
+      "IServerRequest": {
+        "required": [
+          "Method"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/IServerRequestPingRequest"
+          },
+          {
+            "$ref": "#/components/schemas/IServerRequestCreateMessageRequest"
+          },
+          {
+            "$ref": "#/components/schemas/IServerRequestListRootsRequest"
+          },
+          {
+            "$ref": "#/components/schemas/IServerRequestElicitRequest"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "Method",
+          "mapping": {
+            "ping": "#/components/schemas/IServerRequestPingRequest",
+            "sampling/createMessage": "#/components/schemas/IServerRequestCreateMessageRequest",
+            "roots/list": "#/components/schemas/IServerRequestListRootsRequest",
+            "elicitation/create": "#/components/schemas/IServerRequestElicitRequest"
+          }
+        }
+      },
+      "IServerRequestCreateMessageRequest": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "sampling/createMessage"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "nullable": true
+          },
+          "params": {
+            "required": [
+              "messages"
+            ],
+            "type": "object",
+            "properties": {
+              "includeContext": {
+                "enum": [
+                  "none",
+                  "thisServer",
+                  "allServers",
+                  null
+                ],
+                "nullable": true
+              },
+              "maxTokens": {
+                "type": "integer",
+                "format": "int32",
+                "nullable": true
+              },
+              "messages": {
+                "type": "array",
+                "items": {
+                  "required": [
+                    "content",
+                    "role"
+                  ],
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "$ref": "#/components/schemas/ContentBlock"
+                    },
+                    "role": {
+                      "$ref": "#/components/schemas/Role"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "$ref": "#/components/schemas/NullableOfJsonElement"
+              },
+              "modelPreferences": {
+                "type": "object",
+                "properties": {
+                  "costPriority": {
+                    "type": "number",
+                    "format": "float",
+                    "nullable": true
+                  },
+                  "hints": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    },
+                    "nullable": true
+                  },
+                  "speedPriority": {
+                    "type": "number",
+                    "format": "float",
+                    "nullable": true
+                  },
+                  "intelligencePriority": {
+                    "type": "number",
+                    "format": "float",
+                    "nullable": true
+                  }
+                },
+                "nullable": true
+              },
+              "stopSequences": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "nullable": true
+              },
+              "systemPrompt": {
+                "type": "string",
+                "nullable": true
+              },
+              "temperature": {
+                "type": "number",
+                "format": "float",
+                "nullable": true
+              },
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "IServerRequestElicitRequest": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "elicitation/create"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "nullable": true
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "requestedSchema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "properties": {
+                    "type": "object"
+                  },
+                  "required": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "IServerRequestListRootsRequest": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "roots/list"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "nullable": true
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "cursor": {
+                "type": "string",
+                "nullable": true
+              },
+              "_meta": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        }
+      },
+      "IServerRequestPingRequest": {
+        "properties": {
+          "Method": {
+            "enum": [
+              "ping"
+            ],
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
