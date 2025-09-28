@@ -5,13 +5,15 @@
             "name": "PureHttpMcpClient",
             "type": "coreclr",
             "request": "launch",
-            "program": "dotnet",
-            "args": [
-                "run"
-            ],
+            "program": "${workspaceFolder}/client/bin/Debug/net9.0/PureHttpMcpClient.dll",
             "cwd": "${workspaceFolder}/client",
             "stopAtEntry": false,
-            "console": "externalTerminal"
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "preLaunchTask": "build-client"
         }
     ]
 }
