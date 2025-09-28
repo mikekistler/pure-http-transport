@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System;
 using System.ComponentModel;
 
-using PureHttpMcpServer.Resources;
 using ModelContextProtocol.Protocol;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -17,6 +16,7 @@ namespace PureHttpTransport;
 
 public static class ResourcesEndpoints
 {
+    public static IMockResources? MockResources { get; set; } = null;
     public static IEndpointRouteBuilder MapResourcesEndpoints(this IEndpointRouteBuilder app)
     {
         var resources = app.MapGroup("/resources").WithTags("Resources");
@@ -28,7 +28,7 @@ public static class ResourcesEndpoints
             string? cursor
         ) =>
         {
-            var resourceList = MockResources.ListResources().ToList();
+            var resourceList = MockResources?.ListResources().ToList() ?? new List<Resource>();
             var result = new ListResourcesResult()
             {
                 Resources = resourceList,
@@ -45,7 +45,7 @@ public static class ResourcesEndpoints
             string? cursor
         ) =>
         {
-            var templates = MockResources.ListResourceTemplates().ToList();
+            var templates = MockResources?.ListResourceTemplates().ToList() ?? new List<ResourceTemplate>();
             var result = new ListResourceTemplatesResult()
             {
                 ResourceTemplates = templates,
@@ -67,7 +67,7 @@ public static class ResourcesEndpoints
                 return TypedResults.BadRequest<ProblemDetails>(new() { Detail = "Missing URI" });
             }
 
-            var contents = MockResources.GetResourceContents(requestParams.Uri);
+            var contents = MockResources?.GetResourceContents(requestParams.Uri);
 
             if (contents == null)
             {
@@ -90,10 +90,10 @@ public static class ResourcesEndpoints
         {
             if (requestParams == null || string.IsNullOrEmpty(requestParams.Uri))
             {
-                return TypedResults.BadRequest<ProblemDetails>(new () { Detail = "Missing URI" });
+                return TypedResults.BadRequest<ProblemDetails>(new() { Detail = "Missing URI" });
             }
 
-            var result = MockResources.SubscribeToResource(requestParams.Uri);
+            var result = MockResources?.SubscribeToResource(requestParams.Uri) ?? false;
             if (!result)
             {
                 return TypedResults.NotFound<ProblemDetails>(new() { Detail = "Resource not found" });
@@ -105,18 +105,18 @@ public static class ResourcesEndpoints
         .WithDescription("Subscribe to changes for a specific resource URI.");
 
         // Unsubscribe
-        resources.MapPost("/unsubscribe", Results<Accepted, BadRequest<ProblemDetails>, NotFound<ProblemDetails>>(
+        resources.MapPost("/unsubscribe", Results<Accepted, BadRequest<ProblemDetails>, NotFound<ProblemDetails>> (
             UnsubscribeRequestParams requestParams) =>
         {
             if (requestParams == null || string.IsNullOrEmpty(requestParams.Uri))
             {
-                return TypedResults.BadRequest<ProblemDetails>(new () { Detail = "Missing URI" });
+                return TypedResults.BadRequest<ProblemDetails>(new() { Detail = "Missing URI" });
             }
 
-            var result = MockResources.UnsubscribeToResource(requestParams.Uri);
+            var result = MockResources?.UnsubscribeToResource(requestParams.Uri) ?? false;
             if (!result)
             {
-                return TypedResults.NotFound<ProblemDetails>(new () { Detail = "Resource not found" });
+                return TypedResults.NotFound<ProblemDetails>(new() { Detail = "Resource not found" });
             }
 
             return TypedResults.Accepted("about:blank");
@@ -126,4 +126,13 @@ public static class ResourcesEndpoints
 
         return app;
     }
+}
+
+public interface IMockResources
+{
+    IEnumerable<Resource> ListResources();
+    IEnumerable<ResourceTemplate> ListResourceTemplates();
+    List<ResourceContents>? GetResourceContents(string uri);
+    bool SubscribeToResource(string uri);
+    bool UnsubscribeToResource(string uri);
 }

@@ -16,7 +16,7 @@ Accept: application/json
 
 ###
 
-POST {{HostAddress}}/tools/get_current_weather/calls
+POST {{HostAddress}}/tools/getCurrentWeather/calls
 Mcp-Protocol-Version: 2025-06-18
 Content-Type: application/json
 Accept: application/json

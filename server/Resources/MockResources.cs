@@ -1,10 +1,11 @@
 using ModelContextProtocol.Protocol;
+using PureHttpTransport;
 using System.ComponentModel;
 using System.Text.Json.Nodes;
 
 namespace PureHttpMcpServer.Resources;
 
-public static class MockResources
+public class MockResources : IMockResources
 {
     // Track subscriptions: resource URI -> set of subscribers (for demo, just a HashSet)
     private static readonly HashSet<string> _subscribedUris = new();
@@ -39,27 +40,27 @@ public static class MockResources
         }
     ];
 
-    public static IEnumerable<Resource> ListResources()
+    public IEnumerable<Resource> ListResources()
     {
         return _resources;
     }
 
-    public static IEnumerable<ResourceTemplate> ListResourceTemplates()
+    public IEnumerable<ResourceTemplate> ListResourceTemplates()
     {
         return _resourceTemplates;
     }
 
-    public static Resource? GetResource(string uri)
+    public Resource? GetResource(string uri)
     {
         return _resources.FirstOrDefault(r => r.Uri == uri);
     }
 
-    public static ResourceTemplate? GetResourceTemplate(string uri)
+    public ResourceTemplate? GetResourceTemplate(string uri)
     {
         return _resourceTemplates.FirstOrDefault(t => uri.StartsWith(t.UriTemplate.Split('{')[0]));
     }
 
-    public static bool SubscribeToResource(string uri)
+    public bool SubscribeToResource(string uri)
     {
         lock (_subscribedUris)
         {
@@ -67,7 +68,7 @@ public static class MockResources
         }
     }
 
-    public static bool UnsubscribeToResource(string uri)
+    public bool UnsubscribeToResource(string uri)
     {
         lock (_subscribedUris)
         {
@@ -83,7 +84,7 @@ public static class MockResources
         }
     }
 
-    public static List<ResourceContents>? GetResourceContents(string uri)
+    public List<ResourceContents>? GetResourceContents(string uri)
     {
         // First check static resources
         var resource = _resources.FirstOrDefault(r => r.Uri == uri);

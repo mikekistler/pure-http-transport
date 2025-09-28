@@ -11,9 +11,9 @@ using static ModelContextProtocol.Protocol.ElicitRequestParams;
 
 namespace PureHttpMcpServer.Tools;
 
-public static class MockTools
+public class MockTools : IMockTools
 {
-    public static List<Tool> ListTools()
+    public IEnumerable<Tool> ListTools()
     {
         var inputSchema = GetSchema(typeof(GetCurrentWeatherInput));
         var outputSchema = GetSchema(typeof(GetCurrentWeatherResult));
@@ -67,7 +67,7 @@ public static class MockTools
         var schemaAsElement = JsonDocument.Parse(schemaAsNode.ToJsonString()).RootElement;
         return schemaAsElement;
     }
-    public static async Task<CallToolResult> CallTool(string name, CallToolRequestParams requestParams)
+    public async Task<CallToolResult> CallTool(string name, CallToolRequestParams requestParams)
     {
         // Dispatch to supported tools
         switch (name)

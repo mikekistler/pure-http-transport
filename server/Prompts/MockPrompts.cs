@@ -1,8 +1,9 @@
 using ModelContextProtocol.Protocol;
+using PureHttpTransport;
 
 namespace PureHttpMcpServer.Prompts;
 
-public static class MockPrompts
+public class MockPrompts : IMockPrompts
 {
     private static List<Prompt> _prompts = new List<Prompt>
         {
@@ -10,12 +11,12 @@ public static class MockPrompts
             new() { Name = "prompt2", Title = "Farewell", Description = "A warm farewell message." }
         };
 
-    public static IEnumerable<Prompt> ListPrompts()
+    public IEnumerable<Prompt> ListPrompts()
     {
         return _prompts;
     }
 
-    public static Prompt? GetPrompt(string name)
+    public Prompt? GetPrompt(string name)
     {
         return _prompts.FirstOrDefault(p => p.Name == name);
     }

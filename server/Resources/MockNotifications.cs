@@ -43,7 +43,7 @@ public class MockNotifications : BackgroundService
         _logger.LogDebug("Updating existing resources with current timestamp - {Count} subscriptions", subscriptions.Count);
 
         // Iterate through existing resources and update them
-        foreach (var resource in MockResources.ListResources())
+        foreach (var resource in PureHttpTransport.ResourcesEndpoints.MockResources?.ListResources() ?? Enumerable.Empty<Resource>())
         {
             // Update the resource's metadata to simulate a change
             resource.Meta!["LastUpdated"] = DateTime.UtcNow.ToString("O");

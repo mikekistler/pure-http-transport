@@ -8,13 +8,14 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Schema;
 using System.ComponentModel;
 using Microsoft.AspNetCore.Http.HttpResults;
-using PureHttpMcpServer.Tools;
 using System.Threading.Tasks;
 
 namespace PureHttpTransport;
 
 public static class ToolsEndpoints
 {
+    public static IMockTools? MockTools { get; set; } = null;
+
     public static void MapToolsEndpoints(this IEndpointRouteBuilder app)
     {
         var toolsGroup = app.MapGroup("/tools").WithTags("Tools");
@@ -26,16 +27,16 @@ public static class ToolsEndpoints
             string? cursor
         ) =>
         {
-            var tools = MockTools.ListTools();
+            var tools = MockTools?.ListTools();
 
             var result = new ListToolsResult
             {
                 Meta = new JsonObject
                 {
-                    ["totalTools"] = tools.Count
+                    ["totalTools"] = JsonValue.Create(tools?.Count())
                 },
                 NextCursor = string.Empty,
-                Tools = tools
+                Tools = tools?.ToList() ?? new List<Tool>()
             };
 
             return TypedResults.Ok(result);
@@ -58,6 +59,13 @@ public static class ToolsEndpoints
                     Detail = "tool name required"
                 });
             }
+            if (MockTools == null)
+            {
+                return TypedResults.BadRequest<ProblemDetails>(new()
+                {
+                    Detail = "no tools available"
+                });
+            }
             var result = await MockTools.CallTool(name, requestParams);
 
             return TypedResults.Ok<CallToolResult>(result);
@@ -65,4 +73,10 @@ public static class ToolsEndpoints
         .WithName("CallTool")
         .WithDescription("Invoke a tool call by name");
     }
+}
+
+public interface IMockTools
+{
+    IEnumerable<Tool> ListTools();
+    Task<CallToolResult> CallTool(string name, CallToolRequestParams requestParams);
 }

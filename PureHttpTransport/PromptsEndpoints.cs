@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using ModelContextProtocol.Protocol;
-using PureHttpMcpServer.Prompts;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,6 +13,8 @@ namespace PureHttpTransport;
 
 public static class PromptsEndpoints
 {
+    public static IMockPrompts? MockPrompts { get; set; } = null;
+
     public static IEndpointRouteBuilder MapPromptsEndpoints(this IEndpointRouteBuilder app)
     {
         var prompts = app.MapGroup("/prompts").WithTags("Prompts");
@@ -27,7 +28,7 @@ public static class PromptsEndpoints
         {
             var result = new ListPromptsResult
             {
-                Prompts = MockPrompts.ListPrompts().ToList()
+                Prompts = MockPrompts?.ListPrompts()?.ToList() ?? new List<Prompt>()
             };
             return TypedResults.Ok<ListPromptsResult>(result);
         })
@@ -35,14 +36,14 @@ public static class PromptsEndpoints
         .WithDescription("List available prompts");
 
         // Get a prompt by name and render with optional params in the request body
-        prompts.MapPost("/{name}", Results<Ok<GetPromptResult>, NotFound<ProblemDetails>>(
+        prompts.MapPost("/{name}", Results<Ok<GetPromptResult>, NotFound<ProblemDetails>> (
             [Description("The name of the prompt or prompt template")]
             string name,
             [Description("The parameters to get a prompt provided by a server.")]
             GetPromptRequestParams requestParams
         ) =>
         {
-            var prompt = MockPrompts.GetPrompt(name);
+            var prompt = MockPrompts?.GetPrompt(name);
             if (prompt == null)
             {
                 return TypedResults.NotFound<ProblemDetails>(new()
@@ -74,4 +75,10 @@ public static class PromptsEndpoints
 
         return app;
     }
+}
+
+public interface IMockPrompts
+{
+    IEnumerable<Prompt> ListPrompts();
+    Prompt? GetPrompt(string name);
 }

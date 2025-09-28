@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.HttpLogging;
 using PureHttpMcpServer.Resources;
+using PureHttpMcpServer.Tools;
+using PureHttpMcpServer.Prompts;
 using PureHttpTransport;
 using PureHttpTransport.OpenApiExtensions;
 
@@ -52,6 +54,11 @@ app.UseHttpsRedirection();
 app.UseStatusCodePages();
 
 app.UsePureHttpTransport();
+
+// Assign instances instead of types
+PureHttpTransport.ToolsEndpoints.MockTools = new MockTools();
+PureHttpTransport.ResourcesEndpoints.MockResources = new MockResources();
+PureHttpTransport.PromptsEndpoints.MockPrompts = new MockPrompts();
 
 app.Run();
 

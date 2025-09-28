@@ -116,7 +116,7 @@ public static class RequestsEndpoints
         var staleEntries = _pending.Where(kvp => kvp.Value.PendingSince.HasValue && (now - kvp.Value.PendingSince.Value).TotalMilliseconds > PendingTimeoutMilliseconds).ToList();
         foreach (var kvp in staleEntries)
         {
-            _logger.LogWarning($"Reactivating stale pending request {kvp.Key} after {(now - kvp.Value.PendingSince.Value).TotalMilliseconds}ms");
+            _logger.LogWarning($"Reactivating stale pending request {kvp.Key} after {(now - kvp.Value.PendingSince!.Value).TotalMilliseconds}ms");
             kvp.Value.PendingSince = null;
             _requestQueue.Enqueue(kvp.Value);
         }
