@@ -55,6 +55,7 @@ public class MockTools : IMockTools
         RespectNullableAnnotations = true,
         RespectRequiredConstructorParameters = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        NumberHandling = JsonNumberHandling.Strict,
     };
     static JsonSchemaExporterOptions exporterOptions = new JsonSchemaExporterOptions
     {

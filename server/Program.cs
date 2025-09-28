@@ -4,6 +4,7 @@ using PureHttpMcpServer.Tools;
 using PureHttpMcpServer.Prompts;
 using PureHttpTransport;
 using PureHttpTransport.OpenApiExtensions;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +39,9 @@ builder.Services.AddHttpLogging(logging =>
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts =>
 {
     opts.SerializerOptions.Converters.Add(new ResultJsonConverter());
+    opts.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+    opts.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    opts.SerializerOptions.PropertyNameCaseInsensitive = false;
 });
 
 var app = builder.Build();
