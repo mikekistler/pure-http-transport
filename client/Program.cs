@@ -38,11 +38,14 @@ var rootCommand = new RootCommand("Pure HTTP MCP Client - A CLI client for Model
 var cliApp = host.Services.GetRequiredService<CliApplication>();
 cliApp.ConfigureCommands(rootCommand);
 
-
 // Start background poller
 var mcpClient = host.Services.GetRequiredService<McpClient>();
-var backgroundPoller = new BackgroundPoller(mcpClient);
+var logger = host.Services.GetRequiredService<ILogger<BackgroundPoller>>();
+var backgroundPoller = new BackgroundPoller(mcpClient, logger);
 backgroundPoller.Start();
+
+// Create a request processor
+var requestProcessor = new RequestProcessor(mcpClient);
 
 // Gather top-level commands for tab completion
 var commandNames = rootCommand.Children
@@ -52,15 +55,28 @@ var commandNames = rootCommand.Children
     .ToArray();
 ReadLine.AutoCompletionHandler = new SimpleAutoCompleteHandler(commandNames);
 
+// Print prompt before entering the REPL loop
+Console.Write("mcp> ");
+
 // REPL loop
 while (true)
 {
-    var line = ReadLine.Read("mcp> ");
-    if (line == null)
-        break;
-    var trimmed = line.Trim();
+    // Process requests while waiting for user input
+    while (!Console.KeyAvailable)
+    {
+        requestProcessor.ProcessRequests();
+        await Task.Delay(100);
+    }
+    var line = ReadLine.Read();
+
+    var trimmed = line?.Trim() ?? "";
     if (string.IsNullOrEmpty(trimmed))
+    {
+        // If the user just presses Enter, we should show the prompt again.
+        Console.Write("mcp> ");
         continue;
+    }
+
     if (trimmed.Equals("exit", StringComparison.OrdinalIgnoreCase) ||
         trimmed.Equals("quit", StringComparison.OrdinalIgnoreCase))
         break;
@@ -77,6 +93,9 @@ while (true)
     {
         Console.WriteLine($"Error: {ex.Message}");
     }
+
+    // Print prompt after processing command
+    Console.Write("mcp> ");
 }
 
 // Stop background poller
