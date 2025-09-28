@@ -50,7 +50,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.UseHttpLogging();
+    // app.UseHttpLogging();
 }
 
 app.UseHttpsRedirection();

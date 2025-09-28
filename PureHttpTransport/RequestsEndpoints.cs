@@ -97,6 +97,8 @@ public static class RequestsEndpoints
                     response.Headers[PureHttpTransport.McpRequestIdHeader] = entry.Id;
                     response.Headers[PureHttpTransport.McpProtocolVersionHeader] = "2025-06-18";
 
+                    _logger.LogInformation($"Sending request {entry.Id} of type {entry.request.GetType().Name} to client");
+
                     return TypedResults.Ok<IServerRequest>(entry.request);
                 }
             }
@@ -117,6 +119,7 @@ public static class RequestsEndpoints
         {
             if (HandleResponse(requestId, result))
             {
+                _logger.LogInformation($"Received response for request {requestId} of type {result.GetType().Name} from client");
                 return TypedResults.Accepted("about:blank");
             }
 
