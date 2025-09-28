@@ -16,7 +16,7 @@ public class RequestProcessor
         _mcpClient = mcpClient;
     }
 
-    public void ProcessRequests()
+    public async Task ProcessRequests()
     {
         while (BackgroundPoller.RequestQueue.TryDequeue(out var serverRequestEntry))
         {
@@ -25,7 +25,7 @@ public class RequestProcessor
                 var result = HandleElicitationSync(elicitRequest.Params);
 
                 // use _mcpClient here to send the result back if needed
-                _mcpClient.SendElicitResult(serverRequestEntry.RequestId, result);
+                await _mcpClient.SendElicitResultAsync(serverRequestEntry.RequestId, result);
             }
         }
     }

@@ -64,7 +64,11 @@ while (true)
     // Process requests while waiting for user input
     while (!Console.KeyAvailable)
     {
-        requestProcessor.ProcessRequests();
+        await requestProcessor.ProcessRequests();
+        if (cliApp.CheckPendingToolCalls()) {
+            // If any tool calls completed, print the prompt again
+            Console.Write("mcp> ");
+        }
         await Task.Delay(100);
     }
     var line = ReadLine.Read();

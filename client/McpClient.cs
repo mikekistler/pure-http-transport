@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 
@@ -21,7 +21,9 @@ public class McpClient
         _logger = logger;
         _jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
-            WriteIndented = true
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            NumberHandling = JsonNumberHandling.Strict
         };
     }
 
@@ -262,15 +264,18 @@ public class McpClient
         {
             var json = JsonSerializer.Serialize(result, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var request = new HttpRequestMessage(HttpMethod.Post, "requests")
+            {
+                Content = content
+            };
             // put the requestId in the Mcp-Request-ID header
-            _httpClient.DefaultRequestHeaders.Remove("MCP-Request-ID");
-            _httpClient.DefaultRequestHeaders.Add("MCP-Request-ID", requestId);
-            var response = await _httpClient.PostAsync($"responses", content);
+            request.Headers.Add(PureHttpTransport.PureHttpTransport.McpRequestIdHeader, requestId);
+            var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Failed to send elicit result for request {RequestId}", requestId);
+            _logger.LogError(ex, "Failed attempting to send elicit result for request {RequestId}", requestId);
         }
     }
 }
