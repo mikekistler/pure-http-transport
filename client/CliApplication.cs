@@ -11,6 +11,9 @@ public class CliApplication
     private readonly McpClient _mcpClient;
     private readonly ILogger<CliApplication> _logger;
 
+    // Track pending tool calls by unique key
+    private readonly Dictionary<string, Task<CallToolResult?>> _pendingToolCalls = new();
+
     public CliApplication(McpClient mcpClient, ILogger<CliApplication> logger)
     {
         _mcpClient = mcpClient;
@@ -177,7 +180,7 @@ public class CliApplication
         }
     }
 
-    private async Task CallToolCommandHandler(string name, string? argumentsJson)
+    private Task CallToolCommandHandler(string name, string? argumentsJson)
     {
         try
         {
@@ -188,41 +191,68 @@ public class CliApplication
                 arguments = parsed;
             }
 
-            Console.WriteLine($"Calling tool '{name}'...");
-            var result = await _mcpClient.CallToolAsync(name, arguments);
-            if (result != null)
-            {
-                if (result.IsError == true)
-                {
-                    Console.WriteLine("❌ Tool call failed:");
-                }
-                else
-                {
-                    Console.WriteLine("✅ Tool call successful:");
-                }
-
-                if (result.Content != null)
-                {
-                    foreach (var content in result.Content)
-                    {
-                        if (content is TextContentBlock textContent)
-                        {
-                            Console.WriteLine(textContent.Text);
-                        }
-                    }
-                }
-
-                if (result.StructuredContent != null)
-                {
-                    Console.WriteLine("\nStructured content:");
-                    Console.WriteLine(result.StructuredContent.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
-                }
-            }
+            Console.WriteLine($"Initiating tool call '{name}'...");
+            // Start the tool call async task, but do not await
+            var toolCallTask = _mcpClient.CallToolAsync(name, arguments as IReadOnlyDictionary<string, JsonElement>);
+            var key = Guid.NewGuid().ToString();
+            _pendingToolCalls[key] = toolCallTask;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Failed to call tool: {ex.Message}");
+            Console.WriteLine($"❌ Failed to start tool call: {ex.Message}");
         }
+        return Task.CompletedTask;
+    }
+
+    // Call this in your REPL loop to check for completed tool calls
+    public bool CheckPendingToolCalls()
+    {
+        var completed = new List<string>();
+        foreach (var kvp in _pendingToolCalls)
+        {
+            var key = kvp.Key;
+            var task = kvp.Value;
+            if (task.IsCompleted)
+            {
+                var result = task.Result;
+                Console.WriteLine($"\nTool call (Key: {key}) completed:");
+                if (result != null)
+                {
+                    if (result.IsError == true)
+                    {
+                        Console.WriteLine("❌ Tool call failed:");
+                    }
+                    else
+                    {
+                        Console.WriteLine("✅ Tool call successful:");
+                    }
+
+                    if (result.Content != null)
+                    {
+                        foreach (var content in result.Content)
+                        {
+                            if (content is TextContentBlock textContent)
+                            {
+                                Console.WriteLine(textContent.Text);
+                            }
+                        }
+                    }
+
+                    if (result.StructuredContent != null)
+                    {
+                        Console.WriteLine("\nStructured content:");
+                        Console.WriteLine(result.StructuredContent.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                    }
+                }
+                completed.Add(key);
+            }
+        }
+        // Remove completed requests
+        foreach (var key in completed)
+        {
+            _pendingToolCalls.Remove(key);
+        }
+        return completed.Count > 0;
     }
 
     private async Task ListResourcesCommandHandler(string? cursor)
