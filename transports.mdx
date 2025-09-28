@@ -368,10 +368,10 @@ The following table provides a complete mapping from MCP message to HTTP Method 
 | notifications/progress           | POST | /notifications |
 | notifications/roots/list_changed | POST | /notifications |
 | **Responses**            | | |
-| elicit/request           | POST | /responses |
-| ping                     | POST | /responses |
-| roots/list               | POST | /responses |
-| sampling/createMessage   | POST | /responses |
+| elicit/request           | POST | /requests |
+| ping                     | POST | /requests |
+| roots/list               | POST | /requests |
+| sampling/createMessage   | POST | /requests |
 
 ### Sending Messages from Server to Client
 
@@ -421,12 +421,12 @@ The following table summarizes the endpoints provided by the MCP Server using th
 | /prompts             | GET    | prompts/list          |  | 200: ListPromptsResult |
 | /prompts/{name}      | POST   | prompts/get           | GetPromptRequest.params (*) | 200: GetPromptResult |
 | /requests            | GET    | _multiple_            |  | 200: ServerRequest |
+| /requests            | POST   | _multiple_            | ClientResult | 202: Accepted |
 | /resources           | GET    | resources/list        |  | 200: ListResourcesResult |
 | /resources           | POST   | resources/read        | ReadResourceRequest.params (*) | 200: ReadResourceResult |
 | /resources/subscribe | POST   | resources/subscribe   | SubscribeRequest.params (*) | 202: Accepted |
 | /resources/templates | GET    | resources/templates/list |   | 200: ListResourceTemplatesResult |
 | /resources/unsubscribe | POST | resources/unsubscribe | UnsubscribeRequest.params (*) | 202: Accepted |
-| /responses           | POST   | _multiple_            | ClientResult | 202: Accepted |
 | /tools               | GET    | tools/list            |   | 200: ListToolsResult |
 | /tools/{name}/calls  | POST   | tools/call         | CallToolRequest.params (*) | 200: CallToolResult |
 

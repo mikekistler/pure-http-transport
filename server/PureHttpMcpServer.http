@@ -76,9 +76,9 @@ Accept: application/json
 
 ###
 
-@McpRequestId = 780c8419-bd42-4343-b9ea-b283aada90aa
+@McpRequestId = a7ba3afb-ccfe-420e-b6b1-ca830db8cc5f
 
-POST {{HostAddress}}/responses
+POST {{HostAddress}}/requests
 Mcp-Protocol-Version: 2025-06-18
 Content-Type: application/json
 Accept: application/json
@@ -93,7 +93,7 @@ Mcp-Request-Id: {{McpRequestId}}
 
 ###
 
-POST {{HostAddress}}/responses
+POST {{HostAddress}}/requests
 Mcp-Protocol-Version: 2025-06-18
 Content-Type: application/json
 Accept: application/json
@@ -108,7 +108,7 @@ Mcp-Request-Id: {{McpRequestId}}
 
 ###
 
-POST {{HostAddress}}/responses
+POST {{HostAddress}}/requests
 Mcp-Protocol-Version: 2025-06-18
 Content-Type: application/json
 Accept: application/json
@@ -117,6 +117,6 @@ Mcp-Request-Id: {{McpRequestId}}
 {
     "action": "accept",
     "content": {
-        "Guess" : 1
+        "Guess" : 2
     }
 }

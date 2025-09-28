@@ -8,6 +8,8 @@ using PureHttpTransport.Models;
 using System;
 using Microsoft.AspNetCore.Http.HttpResults;
 using ModelContextProtocol.Protocol;
+using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel;
 
 namespace PureHttpTransport;
 
@@ -103,6 +105,28 @@ public static class RequestsEndpoints
         })
         .WithName("GetServerRequest")
         .WithDescription("Get server-initiated requests (one at a time)");
+
+        // Client responses to server requests
+        requests.MapPost("/", Results<Accepted, BadRequest<ProblemDetails>> (
+            [Description("The ID of the request being responded to.")]
+            [FromHeader(Name = PureHttpTransport.McpRequestIdHeader)] string requestId,
+
+            [Description("The result of the request.")]
+            [FromBody] Result result
+        ) =>
+        {
+            if (HandleResponse(requestId, result))
+            {
+                return TypedResults.Accepted("about:blank");
+            }
+
+            return TypedResults.BadRequest<ProblemDetails>(new()
+            {
+                Detail = $"No pending request with ID {requestId} was found.",
+            });
+        })
+        .WithName("ResponsesEndpoint")
+        .WithDescription("Receive client responses to server requests");
 
         return app;
     }

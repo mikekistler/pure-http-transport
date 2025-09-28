@@ -421,6 +421,61 @@
             ]
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "Requests"
+        ],
+        "description": "Receive client responses to server requests",
+        "operationId": "ResponsesEndpoint",
+        "parameters": [
+          {
+            "name": "Mcp-Request-Id",
+            "in": "header",
+            "description": "The ID of the request being responded to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
+        "requestBody": {
+          "description": "The result of the request.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Result"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
       }
     },
     "/resources": {
@@ -671,63 +726,6 @@
           },
           "404": {
             "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2": [
-              "api1",
-              "api2"
-            ]
-          }
-        ]
-      }
-    },
-    "/responses": {
-      "post": {
-        "tags": [
-          "Responses"
-        ],
-        "description": "Receive client responses to server requests",
-        "operationId": "ResponsesEndpoint",
-        "parameters": [
-          {
-            "name": "Mcp-Request-Id",
-            "in": "header",
-            "description": "The ID of the request being responded to.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/McpRequestId"
-          }
-        ],
-        "requestBody": {
-          "description": "The result of the request.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Result"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "Accepted"
-          },
-          "400": {
-            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -2133,9 +2131,6 @@
     },
     {
       "name": "Resources"
-    },
-    {
-      "name": "Responses"
     },
     {
       "name": "Tools"

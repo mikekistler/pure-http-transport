@@ -18,7 +18,6 @@ public static class PureHttpTransport
         app.MapPromptsEndpoints();
         app.MapRequestsEndpoints();
         app.MapResourcesEndpoints();
-        app.MapResponsesEndpoints();
         app.MapToolsEndpoints();
 
         return app;
