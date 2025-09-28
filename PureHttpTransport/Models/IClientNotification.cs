@@ -7,7 +7,7 @@ namespace PureHttpTransport.Models;
 /// <summary>
 /// Base type for all server notifications.
 /// </summary>
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "Method")]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "method")]
 [JsonDerivedType(typeof(CancelledNotification), "notifications/cancelled")]
 [JsonDerivedType(typeof(InitializedNotification), "notifications/initialized")]
 [JsonDerivedType(typeof(ProgressNotification), "notifications/progress")]

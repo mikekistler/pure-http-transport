@@ -10,13 +10,9 @@ namespace PureHttpTransport.Models;
 public sealed class ProgressNotification : IServerNotification, IClientNotification
 {
     /// <summary>
-    /// Always "notifications/progress"
-    /// </summary>
-    public string Method { get; set; } = "notifications/progress";
-
-    /// <summary>
     /// Parameters for the progress notification.
     /// </summary>
+    [JsonPropertyName("params")]
     public ProgressNotificationParams Params { get; set; } = new();
 }
 
@@ -42,6 +38,7 @@ public class ProgressNotificationParams
     /// correlate the notifications with the original request.
     /// </para>
     /// </remarks>
+    [JsonPropertyName("progressToken")]
     public ProgressToken ProgressToken { get; init; }
 
     /// <summary>
@@ -50,6 +47,7 @@ public class ProgressNotificationParams
     /// <remarks>
     /// This should increase for each notification issued as part of the same request, even if the total is unknown.
     /// </remarks>
+    [JsonPropertyName("progress")]
     public ProgressNotificationValue Progress { get; init; }
 }
 
@@ -71,11 +69,14 @@ public struct ProgressNotificationValue
     /// when representing completed items in combination with the <see cref="Total"/> property.
     /// </para>
     /// </remarks>
+    [JsonPropertyName("progress")]
     public float? Progress { get; init; }
 
     /// <summary>Gets or sets the total number of items to process (or total progress required), if known.</summary>
+    [JsonPropertyName("total")]
     public float? Total { get; init; }
 
     /// <summary>Gets or sets an optional message describing the current progress.</summary>
+    [JsonPropertyName("message")]
     public string? Message { get; init; }
 }

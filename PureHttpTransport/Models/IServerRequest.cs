@@ -7,7 +7,7 @@ namespace PureHttpTransport.Models;
 /// <summary>
 /// Base type for all server requests.
 /// </summary>
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "Method")]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "method")]
 [JsonDerivedType(typeof(PingRequest), RequestMethods.Ping)]
 [JsonDerivedType(typeof(CreateMessageRequest), RequestMethods.SamplingCreateMessage)]
 [JsonDerivedType(typeof(ListRootsRequest), RequestMethods.RootsList)]
@@ -16,23 +16,22 @@ public interface IServerRequest { }
 
 public class PingRequest : IServerRequest
 {
-    public string Method => RequestMethods.Ping;
 }
 
-public class CreateMessageRequest(CreateMessageRequestParams requestParams) : IServerRequest
+public class CreateMessageRequest(CreateMessageRequestParams @params) : IServerRequest
 {
-    public string Method => RequestMethods.SamplingCreateMessage;
-    public CreateMessageRequestParams Params { get; set; } = requestParams;
+    [JsonPropertyName("params")]
+    public CreateMessageRequestParams Params { get; set; } = @params;
 }
 
-public class ListRootsRequest(ListResourcesRequestParams requestParams) : IServerRequest
+public class ListRootsRequest(ListResourcesRequestParams @params) : IServerRequest
 {
-    public string Method => RequestMethods.RootsList;
-    public ListResourcesRequestParams Params { get; set; } = requestParams;
+    [JsonPropertyName("params")]
+    public ListResourcesRequestParams Params { get; set; } = @params;
 }
 
-public class ElicitRequest(ElicitRequestParams requestParams) : IServerRequest
+public class ElicitRequest(ElicitRequestParams @params) : IServerRequest
 {
-    public string Method => RequestMethods.ElicitationCreate;
-    public ElicitRequestParams Params { get; set; } = requestParams;
+    [JsonPropertyName("params")]
+    public ElicitRequestParams Params { get; set; } = @params;
 }

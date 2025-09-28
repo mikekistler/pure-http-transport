@@ -53,7 +53,6 @@ public class MockNotifications : BackgroundService
                 _logger.LogInformation("Sending ResourceUpdatedNotifcation to the client");
                 var notification = new ResourceUpdatedNotification
                 {
-                    Method = "resource/updated",
                     Params = notificationParams
                 };
                 NotificationsEndpoints.EnqueueNotification(notification);

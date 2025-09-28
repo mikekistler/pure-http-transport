@@ -1,4 +1,5 @@
 
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport.Models;
@@ -9,13 +10,9 @@ namespace PureHttpTransport.Models;
 public class InitializedNotification : IClientNotification
 {
 	/// <summary>
-	/// The method name for this notification. Always "notifications/initialized".
-	/// </summary>
-	public string Method { get; set; } = "notifications/initialized";
-
-	/// <summary>
 	/// Optional parameters for the notification.
 	/// </summary>
+	[JsonPropertyName("params")]
 	public InitializedNotificationParams Params { get; set; } = new();
 }
 

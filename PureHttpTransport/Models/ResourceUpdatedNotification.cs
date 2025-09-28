@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport.Models;
@@ -8,12 +9,8 @@ namespace PureHttpTransport.Models;
 public sealed class ResourceUpdatedNotification : IServerNotification
 {
     /// <summary>
-    /// Always "notifications/resources/updated"
-    /// </summary>
-    public string Method { get; set; } = "notifications/resources/updated";
-
-    /// <summary>
     /// Parameters for the resource updated notification.
     /// </summary>
+    [JsonPropertyName("params")]
     public ResourceUpdatedNotificationParams Params { get; set; } = new();
 }

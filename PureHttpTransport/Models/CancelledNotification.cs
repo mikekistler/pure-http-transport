@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport.Models;
@@ -11,12 +12,8 @@ namespace PureHttpTransport.Models;
 public sealed class CancelledNotification : IServerNotification, IClientNotification
 {
     /// <summary>
-    /// Always "notifications/cancelled"
-    /// </summary>
-    public string Method { get; set; } = "notifications/cancelled";
-
-    /// <summary>
     /// Parameters for the cancellation notification.
     /// </summary>
+    [JsonPropertyName("params")]
     public CancelledNotificationParams Params { get; set; } = new();
 }

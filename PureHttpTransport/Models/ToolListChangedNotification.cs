@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport.Models;
@@ -8,12 +9,8 @@ namespace PureHttpTransport.Models;
 public sealed class ToolListChangedNotification : IServerNotification
 {
     /// <summary>
-    /// Always "notifications/tools/list_changed"
-    /// </summary>
-    public string Method { get; set; } = "notifications/tools/list_changed";
-
-    /// <summary>
     /// Parameters for the tool list changed notification.
     /// </summary>
+    [JsonPropertyName("params")]
     public ToolListChangedNotificationParams Params { get; set; } = new();
 }

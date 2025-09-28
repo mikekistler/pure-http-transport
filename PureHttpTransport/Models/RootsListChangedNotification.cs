@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport.Models;
@@ -10,12 +11,8 @@ namespace PureHttpTransport.Models;
 public class RootsListChangedNotification : IClientNotification
 {
     /// <summary>
-    /// The method name for this notification. Always "notifications/roots/list_changed".
-    /// </summary>
-    public string Method { get; set; } = "notifications/roots/list_changed";
-
-    /// <summary>
     /// Optional parameters for the notification.
     /// </summary>
+    [JsonPropertyName("params")]
     public RootsListChangedNotificationParams Params { get; set; } = new();
 }

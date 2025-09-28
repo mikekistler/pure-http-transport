@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport.Models;
@@ -8,12 +9,8 @@ namespace PureHttpTransport.Models;
 public sealed class PromptListChangedNotification : IServerNotification
 {
     /// <summary>
-    /// Always "notifications/prompts/list_changed"
-    /// </summary>
-    public string Method { get; set; } = "notifications/prompts/list_changed";
-
-    /// <summary>
     /// Parameters for the prompt list changed notification.
     /// </summary>
+    [JsonPropertyName("params")]
     public PromptListChangedNotificationParams Params { get; set; } = new();
 }

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
 
 namespace PureHttpTransport.Models;
@@ -8,12 +9,8 @@ namespace PureHttpTransport.Models;
 public sealed class LoggingMessageNotification : IServerNotification
 {
     /// <summary>
-    /// Always "notifications/message"
-    /// </summary>
-    public string Method { get; set; } = "notifications/message";
-
-    /// <summary>
     /// Parameters for the logging message notification.
     /// </summary>
+    [JsonPropertyName("params")]
     public LoggingMessageNotificationParams Params { get; set; } = new();
 }

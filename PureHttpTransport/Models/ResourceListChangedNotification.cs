@@ -1,5 +1,6 @@
 namespace PureHttpTransport.Models;
 
+using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
 
 /// <summary>
@@ -8,12 +9,8 @@ using ModelContextProtocol.Protocol;
 public sealed class ResourceListChangedNotification : IServerNotification
 {
     /// <summary>
-    /// Always "notifications/resources/list_changed"
-    /// </summary>
-    public string Method { get; set; } = "notifications/resources/list_changed";
-
-    /// <summary>
     /// Parameters for the resource list changed notification.
     /// </summary>
+    [JsonPropertyName("params")]
     public ResourceListChangedNotificationParams Params { get; set; } = new();
 }
