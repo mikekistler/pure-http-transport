@@ -255,4 +255,22 @@ public class McpClient
             return false;
         }
     }
+
+    public async Task SendElicitResultAsync(string requestId, ElicitResult result)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(result, _jsonOptions);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            // put the requestId in the Mcp-Request-ID header
+            _httpClient.DefaultRequestHeaders.Remove("MCP-Request-ID");
+            _httpClient.DefaultRequestHeaders.Add("MCP-Request-ID", requestId);
+            var response = await _httpClient.PostAsync($"responses", content);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to send elicit result for request {RequestId}", requestId);
+        }
+    }
 }

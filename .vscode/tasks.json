@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "dotnet",
+			"task": "build /Users/mikekistler/Projects/mikekistler/pure-http-transport/client/PureHttpMcpClient.csproj",
+			"file": "/Users/mikekistler/Projects/mikekistler/pure-http-transport/client/PureHttpMcpClient.csproj",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "build-client"
+		}
+	]
+}
