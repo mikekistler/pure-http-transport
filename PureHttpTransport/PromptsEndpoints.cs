@@ -1,13 +1,9 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using ModelContextProtocol.Protocol;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace PureHttpTransport;
 
@@ -36,15 +32,55 @@ public static class PromptsEndpoints
         .WithDescription("List available prompts");
 
         // Get a prompt by name and render with optional params in the request body
-        prompts.MapPost("/{name}", Results<Ok<GetPromptResult>, NotFound<ProblemDetails>> (
+        prompts.MapGet("/{name}", Results<Ok<GetPromptResult>, NotFound<ProblemDetails>> (
             [Description("The name of the prompt or prompt template")]
             string name,
-            [Description("The parameters to get a prompt provided by a server.")]
-            GetPromptRequestParams requestParams
+            [Description("The arguments for the GetPromptRequest.params")]
+            [FromHeader(Name = "Mcp-Arguments")]
+            string? argumentsHeader,
+            [Description("The value of _meta for the request")]
+            [FromHeader(Name = "Mcp-Meta")]
+            string? metaHeader
         ) =>
         {
-            var prompt = MockPrompts?.GetPrompt(name);
-            if (prompt == null)
+            // Reconstruct GetPromptRequest.params
+            // If there is an Mcp-Arguments header, parse the value into a dictionary of string to JsonElement
+            Dictionary<string, JsonElement> arguments = new();
+            if (argumentsHeader is not null)
+            {
+                try
+                {
+                    arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(argumentsHeader)
+                                   ?? new Dictionary<string, JsonElement>();
+                }
+                catch (JsonException)
+                {
+                    // Optionally log or handle invalid JSON
+                }
+            }
+            // Now check for an Mcp-Meta header and if it exists, parse it into a dictionary of string to JsonElement
+            // and add it to mcpArguments under the key "_meta"
+            JsonObject? meta = new();
+            if (metaHeader is not null)
+            {
+                try
+                {
+                    // convert meta to a JsonElement
+                    meta = JsonSerializer.Deserialize<JsonObject>(metaHeader) ;
+                }
+                catch (JsonException)
+                {
+                    // Optionally log or handle invalid JSON
+                }
+            }
+            var requestParams = new GetPromptRequestParams()
+            {
+                Name = name,
+                Arguments = arguments,
+                Meta = meta
+            };
+            var result = MockPrompts?.GetPrompt(requestParams);
+            if (result == null)
             {
                 return TypedResults.NotFound<ProblemDetails>(new()
                 {
@@ -52,22 +88,6 @@ public static class PromptsEndpoints
                 });
             }
 
-            var renderedContent = prompt.Description;
-            var result = new GetPromptResult
-            {
-                Description = renderedContent,
-                Messages = new List<PromptMessage>
-                {
-                    new PromptMessage
-                    {
-                        Role = Role.Assistant,
-                        Content = new TextContentBlock
-                        {
-                            Text = renderedContent ?? string.Empty
-                        }
-                    }
-                }
-            };
             return TypedResults.Ok<GetPromptResult>(result);
         })
         .WithName("GetPrompt")
@@ -80,5 +100,5 @@ public static class PromptsEndpoints
 public interface IMockPrompts
 {
     IEnumerable<Prompt> ListPrompts();
-    Prompt? GetPrompt(string name);
+    GetPromptResult? GetPrompt(GetPromptRequestParams parameters);
 }

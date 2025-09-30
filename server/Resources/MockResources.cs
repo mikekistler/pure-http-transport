@@ -40,39 +40,29 @@ public class MockResources : IMockResources
         }
     ];
 
-    public IEnumerable<Resource> ListResources()
+    public IEnumerable<Resource> ListResources(ListResourcesRequestParams requestParams)
     {
         return _resources;
     }
 
-    public IEnumerable<ResourceTemplate> ListResourceTemplates()
+    public IEnumerable<ResourceTemplate> ListResourceTemplates(ListResourceTemplatesRequestParams requestParams)
     {
         return _resourceTemplates;
     }
 
-    public Resource? GetResource(string uri)
-    {
-        return _resources.FirstOrDefault(r => r.Uri == uri);
-    }
-
-    public ResourceTemplate? GetResourceTemplate(string uri)
-    {
-        return _resourceTemplates.FirstOrDefault(t => uri.StartsWith(t.UriTemplate.Split('{')[0]));
-    }
-
-    public bool SubscribeToResource(string uri)
+    public bool SubscribeToResource(SubscribeRequestParams requestParams)
     {
         lock (_subscribedUris)
         {
-            return _subscribedUris.Add(uri); // returns true if newly subscribed
+            return _subscribedUris.Add(requestParams.Uri!); // returns true if newly subscribed
         }
     }
 
-    public bool UnsubscribeToResource(string uri)
+    public bool UnsubscribeToResource(UnsubscribeRequestParams requestParams)
     {
         lock (_subscribedUris)
         {
-            return _subscribedUris.Remove(uri); // returns true if was subscribed
+            return _subscribedUris.Remove(requestParams.Uri!); // returns true if was subscribed
         }
     }
 
@@ -84,11 +74,11 @@ public class MockResources : IMockResources
         }
     }
 
-    public List<ResourceContents>? GetResourceContents(string uri)
+    public List<ResourceContents>? ReadResource(ReadResourceRequestParams requestParams)
     {
         // First check static resources
-        var resource = _resources.FirstOrDefault(r => r.Uri == uri);
-        var resourceTemplate = _resourceTemplates.FirstOrDefault(t => uri.StartsWith(t.UriTemplate.Split('{')[0]));
+        var resource = _resources.FirstOrDefault(r => r.Uri == requestParams.Uri);
+        var resourceTemplate = _resourceTemplates.FirstOrDefault(t => requestParams.Uri.StartsWith(t.UriTemplate.Split('{')[0]));
 
         if (resource == null && resourceTemplate == null)
         {
@@ -104,7 +94,7 @@ public class MockResources : IMockResources
         {
             result.Add(new TextResourceContents
             {
-                Uri = uri,
+                Uri = requestParams.Uri,
                 MimeType = mimeType,
                 Text = description,
             });
@@ -113,7 +103,7 @@ public class MockResources : IMockResources
         {
             result.Add(new BlobResourceContents
             {
-                Uri = uri,
+                Uri = requestParams.Uri,
                 MimeType = mimeType,
                 Blob = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(description)),
             });
