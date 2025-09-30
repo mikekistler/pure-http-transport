@@ -87,8 +87,10 @@ while (true)
 
     ReadLine.AddHistory(line);
 
-    // Split input into args (simple split, does not handle quotes)
-    var inputArgs = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    // Split input into args, handling single quotes
+    var inputArgs = System.Text.RegularExpressions.Regex.Matches(trimmed, @"'([^']*)'|[^\s]+")
+        .Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Value)
+        .ToArray();
     try
     {
         await rootCommand.InvokeAsync(inputArgs);
