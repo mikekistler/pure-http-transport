@@ -410,27 +410,30 @@ The following table summarizes the endpoints provided by the MCP Server using th
 
 <!-- jq -r '.. | objects | if .properties.method.const then .properties.method.const else empty end' schema/2025-06-18/schema.json | sort -->
 
-| HTTP Path            | Method | related MCP message   | Request Body | Response |
-| -------------------- | ------ | --------------------- | ------------ | -------- |
-| /completions         | POST   | completion/complete   | CompleteRequest.params (*) | 200: CompleteResult |
-| /initialize          | POST   | initialize            | InitializeRequest.params (*) | 200: InitializeResult |
-| /logLevel            | POST   | logging/setLevel      | SetLevelRequest.params (*) | 202: Accepted |
-| /notifications       | GET    | notifications/* (to client) |  | 200: [ServerNotification] |
-| /notifications       | POST   | notifications/* (to server) | [ClientNotification] | 202: Accepted |
-| /ping                | GET    | ping (from client)    |  | 202: Accepted |
-| /prompts             | GET    | prompts/list          |  | 200: ListPromptsResult |
-| /prompts/{name}      | POST   | prompts/get           | GetPromptRequest.params (*) | 200: GetPromptResult |
-| /requests            | GET    | _multiple_            |  | 200: ServerRequest |
-| /requests            | POST   | _multiple_            | ClientResult | 202: Accepted |
-| /resources           | GET    | resources/list        |  | 200: ListResourcesResult |
-| /resources           | POST   | resources/read        | ReadResourceRequest.params (*) | 200: ReadResourceResult |
-| /resources/subscribe | POST   | resources/subscribe   | SubscribeRequest.params (*) | 202: Accepted |
-| /resources/templates | GET    | resources/templates/list |   | 200: ListResourceTemplatesResult |
-| /resources/unsubscribe | POST | resources/unsubscribe | UnsubscribeRequest.params (*) | 202: Accepted |
-| /tools               | GET    | tools/list            |   | 200: ListToolsResult |
-| /tools/{name}/calls  | POST   | tools/call         | CallToolRequest.params (*) | 200: CallToolResult |
+| HTTP Path            | Method | related MCP message   | Request Body                | Response                | Notes |
+| -------------------- | ------ | --------------------- | --------------------------- | ----------------------- | ----- |
+| /completions         | POST   | completion/complete   | CompleteRequest.params      | 200: CompleteResult     | (1)   |
+| /initialize          | POST   | initialize            | InitializeRequest.params    | 200: InitializeResult   | (1)   |
+| /logLevel            | POST   | logging/setLevel      | SetLevelRequest.params      | 202: Accepted           | (1)   |
+| /notifications       | GET    | notifications/* (to client) |                       | 200: [ServerNotification] |     |
+| /notifications       | POST   | notifications/* (to server) | [ClientNotification]  | 202: Accepted           |       |
+| /ping                | GET    | ping (from client)    |                             | 202: Accepted           | (2)   |
+| /prompts             | GET    | prompts/list          |                             | 200: ListPromptsResult  | (3)   |
+| /prompts/{name}      | POST   | prompts/get           | GetPromptRequest.params     | 200: GetPromptResult    | (1)   |
+| /requests            | GET    | _multiple_            |                             | 200: ServerRequest      |       |
+| /requests            | POST   | _multiple_            | ClientResult                | 202: Accepted           |       |
+| /resources           | GET    | resources/list        |                             | 200: ListResourcesResult | (3)  |
+| /resources           | POST   | resources/read        | ReadResourceRequest.params  | 200: ReadResourceResult  | (1)  |
+| /resources/subscribe | POST   | resources/subscribe   | SubscribeRequest.params     | 202: Accepted           | (1)   |
+| /resources/templates | GET    | resources/templates/list |                          | 200: ListResourceTemplatesResult | (3) |
+| /resources/unsubscribe | POST | resources/unsubscribe | UnsubscribeRequest.params   | 202: Accepted           | (1)   |
+| /tools               | GET    | tools/list            |                             | 200: ListToolsResult    | (3)   |
+| /tools/{name}/calls  | POST   | tools/call            | CallToolRequest.params      | 200: CallToolResult     | (1)   |
 
-(*): Includes the "_meta" property of "JSONRPCRequest".
+Notes:
+1. The request body includes the "_meta" property of "JSONRPCRequest".
+2. _meta passed in "Mcp-Meta" header
+3. cursor passed in query string; _meta and other parameters passed in headers
 
 ### Cancellation
 

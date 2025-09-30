@@ -72,7 +72,7 @@ Content-Type: application/json
 MCP list operations (e.g., `tools/list`) and the `ping` operation will use the HTTP GET method.
 Parameters for these operations will be passed either in headers or as query parameters in the URL
 
-MCP allows any request to contain a "_meta" property with arbitrary metadata for the request. For operations mapped to HTTP GET, "_meta" will be passed in headers, with one header per property in the "_meta" object. These headers will use a naming convention of "MCP-Meta-{property-name}" to allow the MCP Server to reconstruct the "_meta" object from the headers.
+MCP allows any request to contain a "_meta" property with arbitrary metadata for the request. For operations mapped to HTTP GET, "_meta" will be passed in the "Mcp-Meta" header. The value of this header will be a JSON-encoded string representing the "_meta" object.
 
 All other operations will use the HTTP POST method and pass parameters in the request body as JSON.
 
@@ -129,6 +129,7 @@ Host: mcp.example.com
 Accept: application/json
 Mcp-Protocol-Version: 2025-06-18
 Mcp-Request-ID: 0605a86c-b88b-4e8c-ada4-2433eccb3d73
+Mcp-Meta: {"foobar":"bazqux"}
 ```
 
 The response body will contain a JSON object representing the `ListToolsResult`.
