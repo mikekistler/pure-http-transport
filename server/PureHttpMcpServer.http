@@ -40,6 +40,13 @@ Accept: application/json
 
 ###
 
+GET {{HostAddress}}/resources/test%3A%2F%2Fstatic%2Fresource%2F1
+Mcp-Protocol-Version: 2025-06-18
+Mcp-Request-Id: 123e4567-e89b-12d3-a456-426614174033
+Accept: application/json
+
+###
+
 GET {{HostAddress}}/prompts
 Mcp-Protocol-Version: 2025-06-18
 Mcp-Request-Id: 123e4567-e89b-12d3-a456-426614174013

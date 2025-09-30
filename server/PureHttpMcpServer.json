@@ -528,69 +528,6 @@
             ]
           }
         ]
-      },
-      "post": {
-        "tags": [
-          "Resources"
-        ],
-        "description": "Read a resource with a specific resource URI.",
-        "operationId": "ReadResource",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/McpRequestId"
-          }
-        ],
-        "requestBody": {
-          "description": "The parameters to get a resource provided by a server.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReadResourceRequestParams"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReadResourceResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2": [
-              "api1",
-              "api2"
-            ]
-          }
-        ]
       }
     },
     "/resources/templates": {
@@ -620,6 +557,69 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListResourceTemplatesResult"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
+      }
+    },
+    "/resources/{uri}": {
+      "get": {
+        "tags": [
+          "Resources"
+        ],
+        "description": "Read a resource with a specific resource URI.",
+        "operationId": "ReadResource",
+        "parameters": [
+          {
+            "name": "uri",
+            "in": "path",
+            "description": "The uri of the resource to read",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadResourceResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -1792,20 +1792,6 @@
           }
         },
         "nullable": true
-      },
-      "ReadResourceRequestParams": {
-        "required": [
-          "uri"
-        ],
-        "type": "object",
-        "properties": {
-          "uri": {
-            "type": "string"
-          },
-          "_meta": {
-            "$ref": "#/components/schemas/JsonObject"
-          }
-        }
       },
       "ReadResourceResult": {
         "type": "object",

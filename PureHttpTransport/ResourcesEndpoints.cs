@@ -11,6 +11,7 @@ using System.ComponentModel;
 using ModelContextProtocol.Protocol;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.HttpResults;
+using System.Net;
 
 namespace PureHttpTransport;
 
@@ -28,7 +29,8 @@ public static class ResourcesEndpoints
             string? cursor
         ) =>
         {
-            var resourceList = MockResources?.ListResources().ToList() ?? new List<Resource>();
+            var requestParams = new ListResourcesRequestParams() { Cursor = cursor };
+            var resourceList = MockResources?.ListResources(requestParams).ToList() ?? new List<Resource>();
             var result = new ListResourcesResult()
             {
                 Resources = resourceList,
@@ -45,7 +47,8 @@ public static class ResourcesEndpoints
             string? cursor
         ) =>
         {
-            var templates = MockResources?.ListResourceTemplates().ToList() ?? new List<ResourceTemplate>();
+            var requestParams = new ListResourceTemplatesRequestParams() { Cursor = cursor };
+            var templates = MockResources?.ListResourceTemplates(requestParams).ToList() ?? new List<ResourceTemplate>();
             var result = new ListResourceTemplatesResult()
             {
                 ResourceTemplates = templates,
@@ -57,17 +60,16 @@ public static class ResourcesEndpoints
         .WithDescription("List all available resource templates.");
 
         // Read a resource
-        resources.MapPost("/", Results<Ok<ReadResourceResult>, BadRequest<ProblemDetails>, NotFound<ProblemDetails>> (
-            [Description("The parameters to get a resource provided by a server.")]
-            ReadResourceRequestParams requestParams
+        resources.MapGet("/{uri}", Results<Ok<ReadResourceResult>, BadRequest<ProblemDetails>, NotFound<ProblemDetails>> (
+            [Description("The uri of the resource to read")]
+            string uri
         ) =>
         {
-            if (requestParams == null || string.IsNullOrEmpty(requestParams.Uri))
-            {
-                return TypedResults.BadRequest<ProblemDetails>(new() { Detail = "Missing URI" });
-            }
+            // The uri parameter is URL-encoded, so decode it
+            uri = WebUtility.UrlDecode(uri);
+            ReadResourceRequestParams requestParams = new() { Uri = uri };
 
-            var contents = MockResources?.GetResourceContents(requestParams.Uri);
+            var contents = MockResources?.ReadResource(requestParams);
 
             if (contents == null)
             {
@@ -93,7 +95,7 @@ public static class ResourcesEndpoints
                 return TypedResults.BadRequest<ProblemDetails>(new() { Detail = "Missing URI" });
             }
 
-            var result = MockResources?.SubscribeToResource(requestParams.Uri) ?? false;
+            var result = MockResources?.SubscribeToResource(requestParams) ?? false;
             if (!result)
             {
                 return TypedResults.NotFound<ProblemDetails>(new() { Detail = "Resource not found" });
@@ -113,7 +115,7 @@ public static class ResourcesEndpoints
                 return TypedResults.BadRequest<ProblemDetails>(new() { Detail = "Missing URI" });
             }
 
-            var result = MockResources?.UnsubscribeToResource(requestParams.Uri) ?? false;
+            var result = MockResources?.UnsubscribeToResource(requestParams) ?? false;
             if (!result)
             {
                 return TypedResults.NotFound<ProblemDetails>(new() { Detail = "Resource not found" });
@@ -130,9 +132,9 @@ public static class ResourcesEndpoints
 
 public interface IMockResources
 {
-    IEnumerable<Resource> ListResources();
-    IEnumerable<ResourceTemplate> ListResourceTemplates();
-    List<ResourceContents>? GetResourceContents(string uri);
-    bool SubscribeToResource(string uri);
-    bool UnsubscribeToResource(string uri);
+    IEnumerable<Resource> ListResources(ListResourcesRequestParams requestParams);
+    IEnumerable<ResourceTemplate> ListResourceTemplates(ListResourceTemplatesRequestParams requestParams);
+    List<ResourceContents>? ReadResource(ReadResourceRequestParams requestParams);
+    bool SubscribeToResource(SubscribeRequestParams requestParams);
+    bool UnsubscribeToResource(UnsubscribeRequestParams requestParams);
 }
