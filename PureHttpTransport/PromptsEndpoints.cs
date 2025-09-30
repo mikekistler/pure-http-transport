@@ -36,11 +36,10 @@ public static class PromptsEndpoints
         .WithDescription("List available prompts");
 
         // Get a prompt by name and render with optional params in the request body
-        prompts.MapPost("/{name}", Results<Ok<GetPromptResult>, NotFound<ProblemDetails>> (
+        prompts.MapGet("/{name}", Results<Ok<GetPromptResult>, NotFound<ProblemDetails>> (
             [Description("The name of the prompt or prompt template")]
             string name,
-            [Description("The parameters to get a prompt provided by a server.")]
-            GetPromptRequestParams requestParams
+            HttpRequest request // for reading parameters passed in headers
         ) =>
         {
             var prompt = MockPrompts?.GetPrompt(name);

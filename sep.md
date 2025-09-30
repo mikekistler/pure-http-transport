@@ -69,8 +69,8 @@ Content-Type: application/json
 
 ### HTTP Methods
 
-MCP list operations (e.g., `tools/list`) and the `ping` operation will use the HTTP GET method.
-Parameters for these operations will be passed either in headers or as query parameters in the URL
+MCP list operations (e.g., `tools/list`), get/read operations (e.g., `resources/read`), and the `ping` operation
+will use the HTTP GET method. Parameters for these operations will be passed either in headers or as query parameters in the URL
 
 MCP allows any request to contain a "_meta" property with arbitrary metadata for the request. For operations mapped to HTTP GET, "_meta" will be passed in the "Mcp-Meta" header. The value of this header will be a JSON-encoded string representing the "_meta" object.
 
