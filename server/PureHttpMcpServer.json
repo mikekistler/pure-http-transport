@@ -318,7 +318,7 @@
       }
     },
     "/prompts/{name}": {
-      "post": {
+      "get": {
         "tags": [
           "Prompts"
         ],
@@ -335,20 +335,25 @@
             }
           },
           {
+            "name": "Mcp-Arguments",
+            "in": "header",
+            "description": "The arguments for the GetPromptRequest.params",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Mcp-Meta",
+            "in": "header",
+            "description": "The value of _meta for the request",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "$ref": "#/components/parameters/McpRequestId"
           }
         ],
-        "requestBody": {
-          "description": "The parameters to get a prompt provided by a server.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GetPromptRequestParams"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK",
@@ -1020,24 +1025,6 @@
       "ElicitationCapability": {
         "type": "object",
         "nullable": true
-      },
-      "GetPromptRequestParams": {
-        "required": [
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "arguments": {
-            "type": "object",
-            "nullable": true
-          },
-          "_meta": {
-            "$ref": "#/components/schemas/JsonObject"
-          }
-        }
       },
       "GetPromptResult": {
         "type": "object",
