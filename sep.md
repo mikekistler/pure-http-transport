@@ -101,7 +101,23 @@ Read operations that return a single resource (e.g., `resources/get`) will also 
 
 ### Initialization
 
-The Pure HTTP transport will support an initialization step that allows the MCP Client to establish a session with the MCP Server. The "initialize" MCP operation is mapped to an HTTP POST request to the "/initialize" endpoint. The request body will contain a JSON object representing the `InitializeRequest` schema, and the response body will contain a JSON object representing the `InitializeResult` schema.
+The Pure HTTP transport will support an initialization step that allows the MCP Client to exchange metadata (e.g. capabilities, instructions) with the MCP Server. The "initialize" MCP operation is mapped to an HTTP POST request to the "/initialize" endpoint. The request body will contain a JSON object representing the `InitializeRequest` schema, and the response body will contain a JSON object representing the `InitializeResult` schema.
+
+### Sessions
+
+The initial version of the Pure HTTP transport will not offer support for (transport-level) sessions. There is
+considerable ambiguity and disagreement about the current session management feature of the
+Streamable HTTP transport, and until there is consensus on the meaning / purpose / behavior
+of sessions it is best to omit them from the Pure HTTP transport.
+
+In the absence of sessions, servers will use the authentication context to determine what server
+resources are appropriate to expose to the client. This is consistent with current RESTful services
+like databases – a request can access any data that the user is authorized to access.
+
+When sessions are better defined, it should be possible to add them to the Pure HTTP transport in a backward-compatible way.
+The session support currently defined in the Streamable HTTP transport could easily be adapted to the Pure HTTP transport
+by returning a "Mcp-Session-Id" header in the response to the "initialize" request, and accepting a "Mcp-Session-Id" header
+in subsequent requests.
 
 ### Tools List example
 

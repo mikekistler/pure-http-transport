@@ -461,17 +461,6 @@ in subsequent requests.
 
 Clients **MUST** store and return HTTP cookies set by the server, as described in the HTTP standard.
 
-### Session Management
-
-The initial version of the Pure HTTP transport does not offer support for sessions. There is
-considerable ambiguity and disagreement about the current session management feature of the
-Streamable HTTP transport, and until there is consensus on the meaning / purpose / behavior
-of sessions it is best to omit them from the Pure HTTP transport.
-
-In the absence of sessions, servers will use the authentication context to determine what server
-resources are appropriate to expose to the client. This is consistent with current RESTful services
-like databases – a request can access any data that the user is authorized to access.
-
 ### Backwards Compatibility
 
 Clients and servers can provide backwards compatibility with the Streamable HTTP transport
