@@ -140,14 +140,9 @@ public class McpClient
     {
         try
         {
-            var requestParams = new ReadResourceRequestParams
-            {
-                Uri = uri
-            };
-
-            var json = JsonSerializer.Serialize(requestParams, _jsonOptions);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("resources", content);
+            // url encode the uri
+            var encodedUri = Uri.EscapeDataString(uri);
+            var response = await _httpClient.GetAsync($"resources/{encodedUri}");
             response.EnsureSuccessStatusCode();
 
             return await response.Content.ReadFromJsonAsync<ReadResourceResult>(_jsonOptions);
@@ -187,15 +182,20 @@ public class McpClient
     {
         try
         {
-            var requestParams = new GetPromptRequestParams
-            {
-                Name = name,
-                Arguments = arguments
-            };
+            // url encode the name
+            var encodedName = Uri.EscapeDataString(name);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"prompts/{encodedName}");
 
-            var json = JsonSerializer.Serialize(requestParams, _jsonOptions);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync($"prompts/{name}", content);
+            // Put the argumentsHeader in the Mcp-Arguments header
+            if (arguments is not null && arguments.Count > 0)
+            {
+                var argumentsHeader = JsonSerializer.Serialize(arguments, _jsonOptions);
+                // remove any newlines from the argumentsHeader
+                argumentsHeader = argumentsHeader.Replace("\n", "").Replace("\r", "");
+                request.Headers.Add("Mcp-Arguments", argumentsHeader);
+            }
+
+            var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
             return await response.Content.ReadFromJsonAsync<GetPromptResult>(_jsonOptions);
