@@ -1,14 +1,8 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
 using ModelContextProtocol.Protocol;
 using System.Text.Json.Nodes;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.Json.Schema;
 using System.ComponentModel;
 using Microsoft.AspNetCore.Http.HttpResults;
-using System.Threading.Tasks;
 
 namespace PureHttpTransport;
 

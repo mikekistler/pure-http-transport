@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Builder;
-
 namespace PureHttpTransport;
 
 public static class PureHttpTransport
