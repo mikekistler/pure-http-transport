@@ -82,7 +82,7 @@ Accept: application/json
 ###
 
 POST {{HostAddress}}/notifications
-Mcp-Protocol-Version: 2025-06--18
+Mcp-Protocol-Version: 2025-06-18
 Mcp-Group-Id: c8ae327c-a2e5-4640-bcf1-f1add5db88e2
 Content-Type: application/json
 
