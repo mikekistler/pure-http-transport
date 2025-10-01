@@ -213,6 +213,14 @@ An initial reference implementation has been developed in C#. It is currently in
 
 ## Future Considerations
 
+### Planned Extensions
+
+A number of proposed improvements to MCP should be straightforward to implement in the Pure HTTP transport. These include:
+
+#### Long-Running Tool Calls
+
+The Pure HTTP transport can support long-running tool calls by allowing the server to return a 202 Accepted response with a Location header pointing to a status endpoint. The client can then poll this endpoint to check the status of the tool call until it is complete.
+
 ### Compatibility with Future MCP Versions
 
 This transport specification is designed to stay at the transport layer and should be compatible with future MCP protocol versions.

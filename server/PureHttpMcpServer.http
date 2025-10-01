@@ -114,13 +114,19 @@ Accept: application/json
 
 ###
 
+GET {{HostAddress}}/tools/GuessTheNumber/calls/123e4567-e89b-12d3-a456-426614174006
+Mcp-Protocol-Version: 2025-06-18
+Accept: application/json
+
+###
+
 GET {{HostAddress}}/requests
 Mcp-Protocol-Version: 2025-06-18
 Accept: application/json
 
 ###
 
-@McpRequestId = a7ba3afb-ccfe-420e-b6b1-ca830db8cc5f
+@McpRequestId = de866755-3ef3-432a-b346-04c1a2b1b73e
 
 POST {{HostAddress}}/requests
 Mcp-Protocol-Version: 2025-06-18
@@ -161,6 +167,6 @@ Mcp-Request-Id: {{McpRequestId}}
 {
     "action": "accept",
     "content": {
-        "Guess" : 2
+        "Guess" : 6
     }
 }

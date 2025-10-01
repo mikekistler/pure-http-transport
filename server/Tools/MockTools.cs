@@ -42,7 +42,7 @@ public class MockTools : IMockTools
                 Annotations = new ToolAnnotations
                 {
                     ReadOnlyHint = true,
-                    OpenWorldHint = true
+                    OpenWorldHint = true,
                 }
             }
         };
@@ -227,6 +227,19 @@ public class MockTools : IMockTools
             {
                 message = $"Your guess is too high! Try again (Attempt #{attempts}):";
             }
+        }
+    }
+
+    public IMockTools.ToolTypeEnum? ToolType(string name)
+    {
+        switch (name)
+        {
+            case "getCurrentWeather":
+                return IMockTools.ToolTypeEnum.Standard;
+            case "GuessTheNumber":
+                return IMockTools.ToolTypeEnum.LongRunning;
+            default:
+                return null;
         }
     }
 }

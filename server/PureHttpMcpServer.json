@@ -815,6 +815,15 @@
             }
           },
           {
+            "name": "Mcp-Request-Id",
+            "in": "header",
+            "description": "The unique identifier for the request",
+            "schema": {
+              "type": "string",
+              "default": null
+            }
+          },
+          {
             "$ref": "#/components/parameters/McpRequestId"
           }
         ],
@@ -838,6 +847,72 @@
                 }
               }
             }
+          },
+          "202": {
+            "description": "Accepted"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2": [
+              "api1",
+              "api2"
+            ]
+          }
+        ]
+      }
+    },
+    "/tools/{name}/calls/{requestId}": {
+      "get": {
+        "tags": [
+          "Tools"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The name of the tool to call",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestId",
+            "in": "path",
+            "description": "The unique identifier for the request",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/McpRequestId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallToolResult"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted"
           },
           "400": {
             "description": "Bad Request",
