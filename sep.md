@@ -70,7 +70,7 @@ Content-Type: application/json
 ### HTTP Methods
 
 MCP list operations (e.g., `tools/list`), get/read operations (e.g., `resources/read`), and the `ping` operation
-will use the HTTP GET method. Parameters for these operations will be passed either in headers or as query parameters in the URL
+will use the HTTP GET method. Parameters for these operations will be passed either in headers or as query parameters in the URL.
 
 MCP allows any request to contain a "_meta" property with arbitrary metadata for the request. For operations mapped to HTTP GET, "_meta" will be passed in the "Mcp-Meta" header. The value of this header will be a JSON-encoded string representing the "_meta" object.
 
@@ -78,7 +78,7 @@ All other operations will use the HTTP POST method and pass parameters in the re
 
 ### HTTP Paths
 
-The HTTP paths for MCP operations will follow a consistent pattern based on the operation name. Each operation will be mapped to a specific endpoint, with the operation name used as the path.
+The HTTP paths for MCP message will follow a consistent pattern based on the message "method". Each message method will be mapped to a specific endpoint.
 
 For example, the `tools/list` operation will be mapped to the `/tools` endpoint, while the `tools/call` operation will be mapped to the `/tools/{toolName}/calls` endpoint.
 
@@ -90,8 +90,42 @@ The Pure HTTP transport will use HTTP headers to convey certain protocol metadat
 
 | Header Name               | Description                                      |
 |---------------------------|--------------------------------------------------|
-| Mcp-Protocol-Version      | Indicates the version of the MCP protocol being used in the request.                        |
+| Mcp-Protocol-Version      | Indicates the version of the MCP protocol being used in the request.    |
 | Mcp-Request-Id            | A globally unique identifier for MCP request messages. |
+| Mcp-Group-Id              | A globally unique identifier for a group of MCP notifications sent from server to client, to support acknowledgement. |
+| Mcp-Meta                  | Sends the contents of the _meta field, as serialized JSON, for requests sent with HTTP GET methods. |
+| Mcp-Arguments             | Sends the contents of the arguments field, as serialized JSON, for requests sent with HTTP GET methods. |
+
+### Sending Messages from Server to Client
+
+The server sends requests and notifications to the client in the response to HTTP GET requests
+issued to the "/requests" and "/notifications" endpoints, respectively.
+
+1. The server **MUST** implement a GET method on the "/requests" and "/notifications" endpoints to
+send requests and notifications to the client.
+2. The response of the GET on "/requests" **MUST** be a 200 with a "ServerRequest" body or 204: NoContent.
+A 200 response also must include an Mcp-Request-Id response header with a globally unique identifier for the request.
+3. The response body of the GET on "/notifications" **MUST** be an array of "ServerNotification" messages (which may be empty).
+4. The response to a GET on "/requests" or "/notifications":
+  - **MUST** have "Content-Type" of `application/json`
+  - **MUST** include the `MCP-Protocol-Version: <protocol-version>` header to specify the protocol version of the message and any response to the message.
+
+#### The "/requests" endpoint
+
+When the server wishes to send a request to the client, it should add it to a collection of server-to-client requests and mark it "active". When the client issues a GET request to "/requests", the server should respond with the "oldest" "active" messages and then mark this message as "pending". This will prevent the same message from being immediately redelivered to the client on a subsequent GET to "/requests". When the server receives a response from the client to a pending request, it should be marked "complete" and is then eligible for garbage collection.
+
+Periodically the server should mark requests that have been "pending" for longer than some timeout period as "active" so that the request is redelivered to the client. Clients should implement logic to avoid duplicate processing of a retried request.
+
+#### The "/notifications" endpoint
+
+Because a GET method cannot alter the state of the server, a mechanism is needed for managing the lifecycle of notifications
+from the server to the client. This is done by tracking groups of notification messages returned by a GET request to "/notifications" and allowing the client to acknowledge these messages on a subsequent POST to "/notifications".
+
+1. Each response to a GET request on "/notifications" **SHOULD** include an "Mcp-Message-Group" header with a globally unique value.
+This header **MAY** be omitted if the GET returns an empty array.
+2. When receiving the response of a GET request on "/notifications" that contains an "Mcp-Message-Group" header, the client **SHOULD** send a POST to the server's "/notifications" endpoint with an "Mcp-Message-Group" request header with the same value when all the notifications in the group have been delivered to the MCP Host.
+  - A POST to "/notifications" with a "Mcp-Message-Group" request header may also contain notifications to be delivered to
+    the server in the request body.
 
 ### Support for conditional requests
 
