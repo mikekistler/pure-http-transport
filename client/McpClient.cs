@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
+using PureHttpMcpClient;
 
 namespace PureHttpMcpClient;
 
@@ -101,10 +102,28 @@ public class McpClient
 
             var json = JsonSerializer.Serialize(requestParams, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync($"tools/{toolName}/calls", content);
-            response.EnsureSuccessStatusCode();
+            var requestId = Guid.NewGuid().ToString();
+            var request = new HttpRequestMessage(HttpMethod.Post, $"tools/{toolName}/calls")
+            {
+                Content = content
+            };
+            // put the requestId in the Mcp-Request-ID header
+            request.Headers.Add(PureHttpTransport.PureHttpTransport.McpRequestIdHeader, requestId);
+            var response = await _httpClient.SendAsync(request);
 
-            return await response.Content.ReadFromJsonAsync<CallToolResult>(_jsonOptions);
+            if (response.StatusCode != System.Net.HttpStatusCode.Accepted)
+            {
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<CallToolResult>(_jsonOptions);
+            }
+
+            // 202 Accepted, return a PendingToolCall for background polling
+            Uri? pollUri = response.Headers.Location ??
+                new Uri(_httpClient.BaseAddress!, $"tools/{toolName}/calls/{requestId}");
+
+            // Create a PendingToolCall object and add it to the BackgroundToolCallPoller
+            return await BackgroundPoller.PollPendingToolCallAsync(pollUri);
+
         }
         catch (HttpRequestException ex)
         {

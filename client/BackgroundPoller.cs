@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PureHttpTransport.Models;
 using PureHttpTransport;
-
 using System.Text.Json;
+using ModelContextProtocol.Protocol;
 
 namespace PureHttpMcpClient;
 
@@ -17,6 +17,12 @@ public class ServerRequestEntry(string requestId, IServerRequest request)
     public IServerRequest Request { get; } = request;
 }
 
+public class PendingToolCall(Uri pollUri)
+{
+    public Uri PollUri { get; } = pollUri;
+    public TaskCompletionSource<CallToolResult?> TaskCompletionSource { get; } = new();
+}
+
 public class BackgroundPoller : IDisposable
 {
     private readonly McpClient _mcpClient;
@@ -24,6 +30,8 @@ public class BackgroundPoller : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private Task? _pollerTask;
     public static readonly ConcurrentQueue<ServerRequestEntry> RequestQueue = new();
+
+    public static readonly ConcurrentDictionary<string, PendingToolCall> OutstandingToolCalls = new();
 
     public BackgroundPoller(McpClient mcpClient, ILogger<BackgroundPoller> logger)
     {
@@ -39,6 +47,7 @@ public class BackgroundPoller : IDisposable
         {
             while (!_cts.Token.IsCancellationRequested)
             {
+                // Poll /requests endpoint
                 try
                 {
                     var reqResponse = await _mcpClient.HttpClient.GetAsync("requests", _cts.Token);
@@ -78,6 +87,7 @@ public class BackgroundPoller : IDisposable
                     _logger.LogError($"[Background] Error fetching /requests: {ex.Message}");
                 }
 
+                // Poll /notifications endpoint
                 try
                 {
                     var notifResponse = await _mcpClient.HttpClient.GetAsync("notifications", _cts.Token);
@@ -118,9 +128,68 @@ public class BackgroundPoller : IDisposable
                 {
                     _ = ex;
                 }
+
+                // Poll outstanding tool calls
+                try
+                {
+                    foreach (var entry in OutstandingToolCalls.ToArray())
+                    {
+                        try
+                        {
+                            // Issue a GET to the PollUri
+                            var toolResponse = await _mcpClient.HttpClient.GetAsync(entry.Value.PollUri, _cts.Token);
+                            if (toolResponse.StatusCode == System.Net.HttpStatusCode.Accepted)
+                            {
+                                // Still processing, do nothing
+                                _logger.LogInformation($"[Background] Tool call {entry.Key} still processing.");
+                            }
+                            else if (toolResponse.IsSuccessStatusCode && toolResponse.Content.Headers.ContentLength > 0)
+                            {
+                                var toolContent = await toolResponse.Content.ReadAsStringAsync(_cts.Token);
+                                var callToolResult = JsonSerializer.Deserialize<CallToolResult>(toolContent, serializerOptions);
+                                if (callToolResult is not null)
+                                {
+                                    _logger.LogInformation($"[Background] Tool call {entry.Key} completed with result.");
+                                    // Set the result on the TaskCompletionSource
+                                    entry.Value.TaskCompletionSource.SetResult(callToolResult);
+                                    // Remove from OutstandingToolCalls
+                                    OutstandingToolCalls.TryRemove(entry.Key, out _);
+                                }
+                            }
+                            else
+                            {
+                                // Some error occurred
+                                _logger.LogWarning($"[Background] Tool call {entry.Key} returned status {toolResponse.StatusCode}.");
+                                // Optionally, you could set an exception on the TaskCompletionSource here
+                                entry.Value.TaskCompletionSource.SetException(new Exception($"Tool call returned status {toolResponse.StatusCode}"));
+                                OutstandingToolCalls.TryRemove(entry.Key, out _);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"[Background] Error polling tool call {entry.Key}: {ex.Message}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"[Background] Error polling outstanding tool calls: {ex.Message}");
+                }
+
                 await Task.Delay(2000, _cts.Token);
             }
         }, _cts.Token);
+    }
+
+    // This method accepts the URI for a pending tool call and creates an entry in the OutstandingToolCalls dictionary
+    // which the background poller will poll and then complete when the tool call is done.
+    // This method does not do the polling itself. That is done in the background task.
+    // This method waits on a the result of the polling and returns it to the caller.
+    internal static async Task<CallToolResult?> PollPendingToolCallAsync(Uri pollUri)
+    {
+        var pendingToolCall = new PendingToolCall(pollUri);
+        OutstandingToolCalls[pollUri.ToString()] = pendingToolCall;
+        return await pendingToolCall.TaskCompletionSource.Task;
     }
 
     public async Task StopAsync()
