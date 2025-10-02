@@ -15,8 +15,6 @@ public class MockTools : IMockTools
 {
     public IEnumerable<Tool> ListTools()
     {
-        var inputSchema = GetSchema(typeof(GetCurrentWeatherInput));
-        var outputSchema = GetSchema(typeof(GetCurrentWeatherResult));
         var result = new List<Tool>
         {
             new Tool
@@ -25,8 +23,8 @@ public class MockTools : IMockTools
                 Name = "getCurrentWeather",
                 Title = "Get Current Weather",
                 Description = "Get the current weather in a given location",
-                InputSchema = inputSchema ?? default,
-                OutputSchema = outputSchema ?? default,
+                InputSchema = GetSchema(typeof(GetCurrentWeatherInput)) ?? default,
+                OutputSchema = GetSchema(typeof(GetCurrentWeatherResult)) ?? default,
                 Annotations = new ToolAnnotations
                 {
                     Title = "Get Current Weather Tool",
@@ -39,6 +37,17 @@ public class MockTools : IMockTools
                 Meta = new JsonObject (),
                 Name = "GuessTheNumber",
                 Description = "A simple game where the user has to guess a number between 1 and 10.",
+                Annotations = new ToolAnnotations
+                {
+                    ReadOnlyHint = true,
+                    OpenWorldHint = true,
+                }
+            },
+            new Tool
+            {
+                Meta = new JsonObject (),
+                Name = "RunAWhile",
+                Description = "Runs for a while and then returns a string.",
                 Annotations = new ToolAnnotations
                 {
                     ReadOnlyHint = true,
@@ -92,6 +101,15 @@ public class MockTools : IMockTools
                         IsError = false
                     };
                 }
+            case "RunAWhile":
+                {
+                    var result = await RunAWhile(requestParams.Arguments, default);
+                    return new CallToolResult
+                    {
+                        Content = new List<ContentBlock> { new TextContentBlock { Text = result } },
+                        IsError = false
+                    };
+                }
             default:
                 return new CallToolResult
                 {
@@ -99,6 +117,23 @@ public class MockTools : IMockTools
                     Content = new List<ContentBlock> { new TextContentBlock { Text = $"unknown tool: {name}" } }
                 };
         }
+    }
+
+    private static async Task<string> RunAWhile(IReadOnlyDictionary<string, JsonElement>? arguments, CancellationToken token)
+    {
+        int delayInSeconds = 15;
+
+        if (arguments != null)
+        {
+            if (arguments.TryGetValue("seconds", out var delayElem) && delayElem.ValueKind == JsonValueKind.Number)
+            {
+                delayInSeconds = delayElem.GetInt32();
+            }
+        }
+
+        // Simulate a long-running task
+        await Task.Delay(delayInSeconds * 1000, token);
+        return $"RunAWhile completed after a delay of {delayInSeconds} seconds.";
     }
 
     private static GetCurrentWeatherResult GetCurrentWeather(IReadOnlyDictionary<string, JsonElement>? arguments)
@@ -238,6 +273,8 @@ public class MockTools : IMockTools
                 return IMockTools.ToolTypeEnum.Standard;
             case "GuessTheNumber":
                 return IMockTools.ToolTypeEnum.LongRunning;
+            case "RunAWhile":
+                return IMockTools.ToolTypeEnum.LongRunning;
             default:
                 return null;
         }
@@ -262,4 +299,10 @@ public class GetCurrentWeatherResult
     public string Unit { get; set; } = string.Empty;
     /// <summary>A brief description of the current weather</summary>
     public string Description { get; set; } = string.Empty;
+}
+
+public class RunAWhileInput
+{
+    /// <summary>The number of seconds the tool should take to run</summary>
+    public int seconds { get; set; } = 15;
 }

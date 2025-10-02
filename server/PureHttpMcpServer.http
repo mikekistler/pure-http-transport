@@ -170,3 +170,24 @@ Mcp-Request-Id: {{McpRequestId}}
         "Guess" : 6
     }
 }
+
+###
+
+POST {{HostAddress}}/tools/RunAWhile/calls
+Mcp-Protocol-Version: 2025-06-18
+Mcp-Request-Id: 123e4567-e89b-12d3-a456-426614174006
+Content-Type: application/json
+Accept: application/json
+
+{
+    "name": "RunAWhile",
+    "arguments": {
+        "seconds": 10
+    }
+}
+
+###
+
+GET {{HostAddress}}/tools/RunAWhile/calls/123e4567-e89b-12d3-a456-426614174006
+Mcp-Protocol-Version: 2025-06-18
+Accept: application/json
