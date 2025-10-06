@@ -41,6 +41,18 @@ from the JSON-RPC envelope. These schema changes have already been proposed in [
 
 [SEP-1319]: https://github.com/modelcontextprotocol/modelcontextprotocol/issues/1319
 
+### Authorization
+
+According to the [MCP specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization#protocol-requirements), authorization is strictly optional but when implemented it must adhere to the OAuth 2.1 and related standards.
+
+As OAuth 2.1 is designed to work over HTTP, it is a natural fit for the Pure HTTP transport. The transport will support the use of OAuth 2.1 access tokens passed in the "Authorization" HTTP header using the "Bearer" scheme.
+
+Servers **MUST** follow the [Security Best Practices](https://modelcontextprotocol.io/specification/2025-06-18/basic/security_best_practices) outlined in the MCP specification when implementing authorization.
+
+### HTTP Scheme
+
+The Pure HTTP transport will support both HTTP and HTTPS schemes. However, for security reasons, all MCP communications **SHOULD** use HTTPS to ensure data confidentiality and integrity.
+
 ### HTTP Methods
 
 MCP list operations (e.g., `tools/list`), get/read operations (e.g., `resources/read`), and the `ping` operation
@@ -82,8 +94,8 @@ The Pure HTTP transport will use standard HTTP status codes for error conditions
 | Method Not Allowed                 | 405 Method Not Allowed |
 | Internal Server Error              | 500 Internal Server Error |
 
-The response body for error conditions should contain the `error` field of the `JSONRPCError` schema,
-which includes the `code` and `message` properties as defined in the [JSON-RPC error codes] specification.
+The response body for error conditions **MUST** contain the `error` field of the `JSONRPCError` schema,
+which **MUST** include the `code` and `message` properties as defined in the [JSON-RPC error codes] specification.
 
 [JSON-RPC error codes]: https://json-rpc.dev/docs/reference/error-codes
 
@@ -115,9 +127,11 @@ A 200 response also must include an Mcp-Request-Id response header with a global
 
 #### The "/requests" endpoint
 
-When the server wishes to send a request to the client, it should add it to a collection of server-to-client requests and mark it "active". When the client issues a GET request to "/requests", the server should respond with the "oldest" "active" messages and then mark this message as "pending". This will prevent the same message from being immediately redelivered to the client on a subsequent GET to "/requests". When the server receives a response from the client to a pending request, it should be marked "complete" and is then eligible for garbage collection.
+When the server wishes to send a request to the client, it should add it to a collection of server-to-client requests and mark it "active". When the client issues a GET request to "/requests", the server should respond with the "oldest" "active" messages and then mark this message as "pending". This will prevent the same message from being immediately redelivered to the client on a subsequent GET to "/requests". When the server receives a response from the client to a pending request, it should be marked "complete" and its resources released.
 
 Periodically the server should mark requests that have been "pending" for longer than some timeout period as "active" so that the request is redelivered to the client. Clients should implement logic to avoid duplicate processing of a retried request.
+
+Servers **SHOULD** implement a configurable limit on the number of "active" and "pending" requests that can be queued for delivery to the client. If this limit is reached, the server **MUST** reject new requests from being added to the queue with an appropriate error message. In addition, servers **MAY** implement a configurable policy for discarding old "active" requests to make room for new requests.
 
 #### The "/notifications" endpoint
 
@@ -132,7 +146,7 @@ This header **MAY** be omitted if the GET returns an empty array.
 
 ### Initialization
 
-The Pure HTTP transport will support an initialization step that allows the MCP Client to exchange metadata (e.g. capabilities, instructions) with the MCP Server. The "initialize" MCP operation is mapped to an HTTP POST request to the "/initialize" endpoint. The request body will contain a JSON object representing the `InitializeRequest` schema, and the response body will contain a JSON object representing the `InitializeResult` schema.
+The Pure HTTP transport will support an initialization step that allows the MCP Client to exchange metadata (e.g. capabilities, instructions) with the MCP Server. The "initialize" MCP operation is mapped to an HTTP POST request to the "/initialize" endpoint. The request body **MUST** contain a JSON object representing the `InitializeRequest` schema, and the response body **MUST** contain a JSON object representing the `InitializeResult` schema.
 
 ### Sessions
 
