@@ -1,16 +1,19 @@
-# SEP-xxxx: Pure HTTP Transport for Model Context Protocol (MCP)
+# SEP-xxxx: Fully Compliant and Backward-Compatible Pure HTTP Transport
 
 <!-- markdownlint-disable MD024 -->
 
+<!-- cspell:ignore resumability streamable -->
+
 **Status:** draft
 **Type:** Standards Track
-**Created:** 2025-09-08
+**Created:** 2025-xx-xx
 **Authors:** Mike Kistler
 
 ## Abstract
 
-This SEP proposes a Pure HTTP transport layer for the Model Context Protocol (MCP). The proposed transport will enable
-scalable and efficient communication between MCP clients and servers using the mature and proven HTTP protocol, without the complexities of JSON-RPC over HTTP.
+This SEP proposes a Pure HTTP transport layer for the Model Context Protocol (MCP). This transport layer is designed to be fully compliant and backward-compatible with the 2025-06-18 MCP protocol while avoiding the complexities and overhead associated with JSON-RPC over HTTP.
+
+Each JSON RPC message type is mapped to a specific HTTP method and path, with parameters passed in the request body or as query parameters. The transport layer also defines a set of HTTP headers to convey metadata and control information necessary for MCP operations.
 
 ## Motivation
 
@@ -37,35 +40,6 @@ It would be helpful, though not strictly necessary, to modify the MCP schemas to
 from the JSON-RPC envelope. These schema changes have already been proposed in [SEP-1319].
 
 [SEP-1319]: https://github.com/modelcontextprotocol/modelcontextprotocol/issues/1319
-
-### Error Responses
-
-The Pure HTTP transport will use standard HTTP status codes for error conditions that occur during MCP operations.
-
-| MCP Error Condition               | HTTP Status Code |
-|-----------------------------------|------------------|
-| Invalid Request                    | 400 Bad Request   |
-| Unauthorized Access                | 401 Unauthorized  |
-| Resource Not Found                 | 404 Not Found     |
-| Method Not Allowed                 | 405 Method Not Allowed |
-| Internal Server Error              | 500 Internal Server Error |
-
-The response body for error conditions should contain the `error` field of the `JSONRPCError` schema,
-which includes the `code` and `message` properties as defined in the [JSON-RPC error codes] specification.
-
-[JSON-RPC error codes]: https://json-rpc.dev/docs/reference/error-codes
-
-#### Example Error Response
-
-```http
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
-
-{
-  "code": -32602,
-  "message": "Unknown tool: invalid_tool_name"
-}
-```
 
 ### HTTP Methods
 
@@ -95,6 +69,35 @@ The Pure HTTP transport will use HTTP headers to convey certain protocol metadat
 | Mcp-Group-Id              | A globally unique identifier for a group of MCP notifications sent from server to client, to support acknowledgement. |
 | Mcp-Meta                  | Sends the contents of the _meta field, as serialized JSON, for requests sent with HTTP GET methods. |
 | Mcp-Arguments             | Sends the contents of the arguments field, as serialized JSON, for requests sent with HTTP GET methods. |
+
+### Error Responses
+
+The Pure HTTP transport will use standard HTTP status codes for error conditions that occur during MCP operations.
+
+| MCP Error Condition               | HTTP Status Code |
+|-----------------------------------|------------------|
+| Invalid Request                    | 400 Bad Request   |
+| Unauthorized Access                | 401 Unauthorized  |
+| Resource Not Found                 | 404 Not Found     |
+| Method Not Allowed                 | 405 Method Not Allowed |
+| Internal Server Error              | 500 Internal Server Error |
+
+The response body for error conditions should contain the `error` field of the `JSONRPCError` schema,
+which includes the `code` and `message` properties as defined in the [JSON-RPC error codes] specification.
+
+[JSON-RPC error codes]: https://json-rpc.dev/docs/reference/error-codes
+
+#### Example Error Response
+
+```http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "code": -32602,
+  "message": "Unknown tool: invalid_tool_name"
+}
+```
 
 ### Sending Messages from Server to Client
 
@@ -127,17 +130,13 @@ This header **MAY** be omitted if the GET returns an empty array.
   - A POST to "/notifications" with a "Mcp-Message-Group" request header may also contain notifications to be delivered to
     the server in the request body.
 
-### Support for conditional requests
-
-All list operations (e.g., `tools/list`, `resources/list`, `prompts/list`) will return an `etag` header in the response. The MCP Client can later poll the MCP Server by issuing another GET request with `if-none-match: etag`; this returns 304-NotModified without the list if the list hasn’t changed, or returns 200-OK with the new list if the list has changed.
-
-Read operations that return a single resource (e.g., `resources/get`) will also return an `etag` header in the response. The MCP Client can later poll the MCP Server by issuing another GET request with `if-none-match: etag`; this returns 304-NotModified without the resource if it hasn’t changed, or returns 200-OK with the new resource if it has changed.
-
 ### Initialization
 
 The Pure HTTP transport will support an initialization step that allows the MCP Client to exchange metadata (e.g. capabilities, instructions) with the MCP Server. The "initialize" MCP operation is mapped to an HTTP POST request to the "/initialize" endpoint. The request body will contain a JSON object representing the `InitializeRequest` schema, and the response body will contain a JSON object representing the `InitializeResult` schema.
 
 ### Sessions
+
+Following the principles of RESTful design, the Pure HTTP transport is stateless at the transport layer.
 
 The initial version of the Pure HTTP transport will not offer support for (transport-level) sessions. There is
 considerable ambiguity and disagreement about the current session management feature of the
@@ -152,6 +151,27 @@ When sessions are better defined, it should be possible to add them to the Pure 
 The session support currently defined in the Streamable HTTP transport could easily be adapted to the Pure HTTP transport
 by returning a "Mcp-Session-Id" header in the response to the "initialize" request, and accepting a "Mcp-Session-Id" header
 in subsequent requests.
+
+### Resumability
+
+In HTTP, there is no expectation of a persistent network connection between client and server, and the Pure HTTP transport embraces this principle.
+It therefore separates the concept of a logical MCP connection from the physical network connection.
+
+A logical connection is associated with an authentication context, e.g., the "sub" (subject) claim of the OAuth token, or a sessionId when implemented.
+Clients do not need to maintain a persistent physical connection to the server, and can "resume" operations on the logical connection
+by simply sending requests with the same authentication context.
+
+As described above in [Sending Messages from Server to Client](#sending-messages-from-server-to-client), the server queues requests and notifications for delivery on a logical connection and delivers them when the client issues a GET request to the appropriate endpoint. This allows clients to disconnect and later reconnect without losing messages.
+
+Further, the server maintains state for requests and notifications sent to the client until they are acknowledged by the client. This ensures delivery of messages that may have been lost due to network issues or client disconnections.
+
+### Support for conditional requests
+
+The Conditional Requests feature of HTTP/1.1 (RFC 9110) can be used to implement efficient polling of lists and resources in MCP. This is an alternative to the "listChanged" and "resources/updated" notifications that servers, particularly when operating in stateless mode, may not wish to implement.
+
+All list operations (e.g., `tools/list`, `resources/list`, `prompts/list`) should return an `etag` header in the response. The MCP Client can later poll the MCP Server by issuing another GET request with `if-none-match: etag`; this returns 304-NotModified without the list if the list hasn’t changed, or returns 200-OK with the new list if the list has changed.
+
+Read operations that return a single resource (e.g., `resources/get`) should also return an `etag` header in the response. The MCP Client can later poll the MCP Server by issuing another GET request with `if-none-match: etag`; this returns 304-NotModified without the resource if it hasn’t changed, or returns 200-OK with the new resource if it has changed.
 
 ### Tools List example
 
@@ -243,7 +263,9 @@ Because this is an additional transport layer, there are no backward compatibili
 
 ## Reference Implementation
 
-An initial reference implementation has been developed in C#. It is currently in a private repository and will be made publicly available once the SEP is finalized.
+A prototype implementation has been developed for both the client and server in C# and is available at
+
+https://github.com/mikekistler/pure-http-transport
 
 ## Future Considerations
 
@@ -251,9 +273,35 @@ An initial reference implementation has been developed in C#. It is currently in
 
 A number of proposed improvements to MCP should be straightforward to implement in the Pure HTTP transport. These include:
 
+#### Streaming Tool Call results
+
+Streaming does not fit the standard JSON RPC abstraction of a single request followed by a single response, but a common extension
+to JSON-RPC is to allow the response to be a stream of messages where a `final` property indicates the last message in the stream.
+For example, [the A2A protocol has adopted this extension](https://a2a-protocol.org/latest/specification/#93-streaming-task-execution-sse).
+If MCP chose to adopt this extension, it could be implemented in the Pure HTTP transport by allowing a tool call response to
+use the text/event-stream content type to send a stream of CallToolResult messages.
+
 #### Long-Running Tool Calls
 
 The Pure HTTP transport can support long-running tool calls by allowing the server to return a 202 Accepted response with a Location header pointing to a status endpoint. The client can then poll this endpoint to check the status of the tool call until it is complete.
+The status endpoint returns 202 Accepted while the tool call is still in progress, and then returns a 200 OK response with the final result of the tool call once it is complete. The server retains the result of the tool call for a configurable period to allow the client to retrieve it.
+
+The status endpoint could be implemented as "/tools/{toolName}/calls/{requestId}", where "requestId" is a unique identifier for the tool call.
+
+#### Webhooks
+
+The Pure HTTP transport could support webhooks by allowing clients to register a callback URL with the server. The server would then send notifications to this URL instead of requiring the client to poll for notifications. This would reduce latency and improve efficiency for receiving notifications.
+
+#### Fault Tolerance
+
+The Pure HTTP transport can be made more fault-tolerant by implementing retry logic for transient errors, such as network timeouts or server errors. Clients can implement exponential backoff strategies when retrying requests to avoid overwhelming the server.
+
+The globally unique request IDs in the "Mcp-Request-Id" header can be used to detect and handle duplicate requests, ensuring idempotency for operations that may be retried.
+
+#### Load Balancing / Horizontal Scalability
+
+For servers that need to scale horizontally, the Pure HTTP transport can be deployed behind a load balancer. The load balancer can distribute incoming requests across multiple server instances, improving scalability and reliability. HTTP cookies can be used to maintain session affinity or store server state if needed.
+The server can also use cookies to link to state stored in a distributed cache (e.g., Redis) or database that all server instances can access.
 
 ### Compatibility with Future MCP Versions
 
