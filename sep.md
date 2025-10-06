@@ -1,4 +1,4 @@
-# SEP-xxxx: Fully Compliant and Backward-Compatible Pure HTTP Transport
+# SEP-1612: Fully Compliant and Backward-Compatible Pure HTTP Transport
 
 <!-- markdownlint-disable MD024 -->
 
@@ -7,7 +7,7 @@
 **Status:** draft
 **Type:** Standards Track
 **Created:** 2025-xx-xx
-**Authors:** Mike Kistler
+**Author:** Mike Kistler
 
 ## Abstract
 
@@ -31,13 +31,9 @@ The transport will also define a set of HTTP headers to convey metadata and cont
 
 ### Schema changes
 
-The Pure HTTP transport will only flow the "payload" portion of the MCP messages over HTTP, without the JSON-RPC envelope.
-This means that the request and response bodies will directly contain the parameters and results of MCP operations,
-rather than being wrapped in a JSON-RPC structure. Some metadata from the JSON-RPC envelope may be conveyed using HTTP headers
-when needed.
+The Pure HTTP transport will only flow the "payload" portion of the MCP messages over HTTP, without the JSON-RPC envelope. This means that the request and response bodies will directly contain the parameters and results of MCP operations, rather than being wrapped in a JSON-RPC structure. Some metadata from the JSON-RPC envelope may be conveyed using HTTP headers when needed.
 
-It would be helpful, though not strictly necessary, to modify the MCP schemas to separate the "payload" portion of each message
-from the JSON-RPC envelope. These schema changes have already been proposed in [SEP-1319].
+It would be helpful, though not strictly necessary, to modify the MCP schemas to separate the "payload" portion of each message from the JSON-RPC envelope. These schema changes have already been proposed in [SEP-1319].
 
 [SEP-1319]: https://github.com/modelcontextprotocol/modelcontextprotocol/issues/1319
 
@@ -55,8 +51,7 @@ The Pure HTTP transport will support both HTTP and HTTPS schemes. However, for s
 
 ### HTTP Methods
 
-MCP list operations (e.g., `tools/list`), get/read operations (e.g., `resources/read`), and the `ping` operation
-will use the HTTP GET method. Parameters for these operations will be passed either in headers or as query parameters in the URL.
+MCP list operations (e.g., `tools/list`), get/read operations (e.g., `resources/read`), and the `ping` operation will use the HTTP GET method. Parameters for these operations will be passed either in headers or as query parameters in the URL.
 
 MCP allows any request to contain a "_meta" property with arbitrary metadata for the request. For operations mapped to HTTP GET, "_meta" will be passed in the "Mcp-Meta" header. The value of this header will be a JSON-encoded string representing the "_meta" object.
 
@@ -94,8 +89,7 @@ The Pure HTTP transport will use standard HTTP status codes for error conditions
 | Method Not Allowed                 | 405 Method Not Allowed |
 | Internal Server Error              | 500 Internal Server Error |
 
-The response body for error conditions **MUST** contain the `error` field of the `JSONRPCError` schema,
-which **MUST** include the `code` and `message` properties as defined in the [JSON-RPC error codes] specification.
+The response body for error conditions **MUST** contain the `error` field of the `JSONRPCError` schema, which **MUST** include the `code` and `message` properties as defined in the [JSON-RPC error codes] specification.
 
 [JSON-RPC error codes]: https://json-rpc.dev/docs/reference/error-codes
 
@@ -113,8 +107,7 @@ Content-Type: application/json
 
 ### Sending Messages from Server to Client
 
-The server sends requests and notifications to the client in the response to HTTP GET requests
-issued to the "/requests" and "/notifications" endpoints, respectively.
+The server sends requests and notifications to the client in the response to HTTP GET requests issued to the "/requests" and "/notifications" endpoints, respectively.
 
 1. The server **MUST** implement a GET method on the "/requests" and "/notifications" endpoints to
 send requests and notifications to the client.
@@ -152,28 +145,17 @@ The Pure HTTP transport will support an initialization step that allows the MCP 
 
 Following the principles of RESTful design, the Pure HTTP transport is stateless at the transport layer.
 
-The initial version of the Pure HTTP transport will not offer support for (transport-level) sessions. There is
-considerable ambiguity and disagreement about the current session management feature of the
-Streamable HTTP transport, and until there is consensus on the meaning / purpose / behavior
-of sessions it is best to omit them from the Pure HTTP transport.
+The initial version of the Pure HTTP transport will not offer support for (transport-level) sessions. There is considerable ambiguity and disagreement about the current session management feature of the Streamable HTTP transport, and until there is consensus on the meaning / purpose / behavior of sessions it is best to omit them from the Pure HTTP transport.
 
-In the absence of sessions, servers will use the authentication context to determine what server
-resources are appropriate to expose to the client. This is consistent with current RESTful services
-like databases – a request can access any data that the user is authorized to access.
+In the absence of sessions, servers will use the authentication context to determine what server resources are appropriate to expose to the client. This is consistent with current RESTful services like databases – a request can access any data that the user is authorized to access.
 
-When sessions are better defined, it should be possible to add them to the Pure HTTP transport in a backward-compatible way.
-The session support currently defined in the Streamable HTTP transport could easily be adapted to the Pure HTTP transport
-by returning a "Mcp-Session-Id" header in the response to the "initialize" request, and accepting a "Mcp-Session-Id" header
-in subsequent requests.
+When sessions are better defined, it should be possible to add them to the Pure HTTP transport in a backward-compatible way. The session support currently defined in the Streamable HTTP transport could easily be adapted to the Pure HTTP transport by returning a "Mcp-Session-Id" header in the response to the "initialize" request, and accepting a "Mcp-Session-Id" header in subsequent requests.
 
 ### Resumability
 
-In HTTP, there is no expectation of a persistent network connection between client and server, and the Pure HTTP transport embraces this principle.
-It therefore separates the concept of a logical MCP connection from the physical network connection.
+In HTTP, there is no expectation of a persistent network connection between client and server, and the Pure HTTP transport embraces this principle. It therefore separates the concept of a logical MCP connection from the physical network connection.
 
-A logical connection is associated with an authentication context, e.g., the "sub" (subject) claim of the OAuth token, or a sessionId when implemented.
-Clients do not need to maintain a persistent physical connection to the server, and can "resume" operations on the logical connection
-by simply sending requests with the same authentication context.
+A logical connection is associated with an authentication context, e.g., the "sub" (subject) claim of the OAuth token, or a sessionId when implemented. Clients do not need to maintain a persistent physical connection to the server, and can "resume" operations on the logical connection by simply sending requests with the same authentication context.
 
 As described above in [Sending Messages from Server to Client](#sending-messages-from-server-to-client), the server queues requests and notifications for delivery on a logical connection and delivers them when the client issues a GET request to the appropriate endpoint. This allows clients to disconnect and later reconnect without losing messages.
 
@@ -281,48 +263,43 @@ A prototype implementation has been developed for both the client and server in 
 
 https://github.com/mikekistler/pure-http-transport
 
-## Future Considerations
-
-### Planned Extensions
+## Planned extensions
 
 A number of proposed improvements to MCP should be straightforward to implement in the Pure HTTP transport. These include:
 
-#### Streaming Tool Call results
+### Streaming Tool Call results
 
-Streaming does not fit the standard JSON RPC abstraction of a single request followed by a single response, but a common extension
-to JSON-RPC is to allow the response to be a stream of messages where a `final` property indicates the last message in the stream.
-For example, [the A2A protocol has adopted this extension](https://a2a-protocol.org/latest/specification/#93-streaming-task-execution-sse).
-If MCP chose to adopt this extension, it could be implemented in the Pure HTTP transport by allowing a tool call response to
-use the text/event-stream content type to send a stream of CallToolResult messages.
+Streaming does not fit the standard JSON RPC abstraction of a single request followed by a single response, but a common extension to JSON-RPC is to allow the response to be a stream of messages where a `final` property indicates the last message in the stream. For example, [the A2A protocol has adopted this extension](https://a2a-protocol.org/latest/specification/#93-streaming-task-execution-sse). If MCP chose to adopt this extension, it could be implemented in the Pure HTTP transport by allowing a tool call response to use the text/event-stream content type to send a stream of CallToolResult messages.
 
-#### Long-Running Tool Calls
+### Long-Running Tool Calls
 
-The Pure HTTP transport can support long-running tool calls by allowing the server to return a 202 Accepted response with a Location header pointing to a status endpoint. The client can then poll this endpoint to check the status of the tool call until it is complete.
-The status endpoint returns 202 Accepted while the tool call is still in progress, and then returns a 200 OK response with the final result of the tool call once it is complete. The server retains the result of the tool call for a configurable period to allow the client to retrieve it.
+The Pure HTTP transport can support long-running tool calls by allowing the server to return a 202 Accepted response with a Location header pointing to a status endpoint. The client can then poll this endpoint to check the status of the tool call until it is complete. The status endpoint returns 202 Accepted while the tool call is still in progress, and then returns a 200 OK response with the final result of the tool call once it is complete. The server retains the result of the tool call for a configurable period to allow the client to retrieve it.
 
 The status endpoint could be implemented as "/tools/{toolName}/calls/{requestId}", where "requestId" is a unique identifier for the tool call.
 
-#### Webhooks
+### Webhooks
 
 The Pure HTTP transport could support webhooks by allowing clients to register a callback URL with the server. The server would then send notifications to this URL instead of requiring the client to poll for notifications. This would reduce latency and improve efficiency for receiving notifications.
 
-#### Fault Tolerance
+### Fault Tolerance
 
 The Pure HTTP transport can be made more fault-tolerant by implementing retry logic for transient errors, such as network timeouts or server errors. Clients can implement exponential backoff strategies when retrying requests to avoid overwhelming the server.
 
 The globally unique request IDs in the "Mcp-Request-Id" header can be used to detect and handle duplicate requests, ensuring idempotency for operations that may be retried.
 
-#### Load Balancing / Horizontal Scalability
+### Load Balancing / Horizontal Scalability
 
 For servers that need to scale horizontally, the Pure HTTP transport can be deployed behind a load balancer. The load balancer can distribute incoming requests across multiple server instances, improving scalability and reliability. HTTP cookies can be used to maintain session affinity or store server state if needed.
 The server can also use cookies to link to state stored in a distributed cache (e.g., Redis) or database that all server instances can access.
 
-### Compatibility with Future MCP Versions
+## Compatibility with Future MCP Versions
 
 This transport specification is designed to stay at the transport layer and should be compatible with future MCP protocol versions.
 
-### Security Implications
+## Security Implications
 
 This SEP has no additional security implications.
 
 ## References
+
+- [HTTP RFCs]: https://httpwg.org/specs/
