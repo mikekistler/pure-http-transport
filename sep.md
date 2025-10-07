@@ -55,7 +55,39 @@ MCP list operations (e.g., `tools/list`), get/read operations (e.g., `resources/
 
 MCP allows any request to contain a "_meta" property with arbitrary metadata for the request. For operations mapped to HTTP GET, "_meta" will be passed in the "Mcp-Meta" header. The value of this header will be a JSON-encoded string representing the "_meta" object.
 
-All other operations will use the HTTP POST method and pass parameters in the request body as JSON.
+The following table summarizes the endpoints provided by the MCP Server using the Pure HTTP transport.
+
+<!-- jq -r '.. | objects | if .properties.method.const then .properties.method.const else empty end' schema/2025-06-18/schema.json | sort -->
+
+| HTTP Path            | Method | related MCP message   | Request Body                | Response                | Notes |
+| -------------------- | ------ | --------------------- | --------------------------- | ----------------------- | ----- |
+| /completions         | POST   | completion/complete   | CompleteRequest.params      | 200: CompleteResult     | (1)   |
+| /initialize          | POST   | initialize            | InitializeRequest.params    | 200: InitializeResult   | (1)   |
+| /logLevel            | POST   | logging/setLevel      | SetLevelRequest.params      | 202: Accepted           | (1)   |
+| /notifications       | GET    | notifications/* (to client) |                       | 200: [ServerNotification] |     |
+| /notifications       | POST   | notifications/* (to server) | [ClientNotification]  | 202: Accepted           |       |
+| /ping                | GET    | ping (from client)    |                             | 202: Accepted           | (2)   |
+| /prompts             | GET    | prompts/list          |                             | 200: ListPromptsResult  | (3,6) |
+| /prompts/{name}      | GET    | prompts/get           |                             | 200: GetPromptResult    | (4)   |
+| /requests            | POST   | _multiple_            |                             | 200: ServerRequest      | (7)   |
+| /responses           | POST   | _multiple_            | ClientResult                | 202: Accepted           | (8)   |
+| /resources           | GET    | resources/list        |                             | 200: ListResourcesResult | (3,6)|
+| /resources/{uri}     | GET    | resources/read        |                             | 200: ReadResourceResult  | (5)  |
+| /resources/subscribe | POST   | resources/subscribe   | SubscribeRequest.params     | 202: Accepted           | (1)   |
+| /resources/templates | GET    | resources/templates/list |                          | 200: ListResourceTemplatesResult | (3) |
+| /resources/unsubscribe | POST | resources/unsubscribe | UnsubscribeRequest.params   | 202: Accepted           | (1)   |
+| /tools               | GET    | tools/list            |                             | 200: ListToolsResult    | (3,6) |
+| /tools/{name}/calls  | POST   | tools/call            | CallToolRequest.params      | 200: CallToolResult     | (1)   |
+
+Notes:
+1. The request body includes the "_meta" property of "JSONRPCRequest".
+2. _meta passed in "Mcp-Meta" header
+3. cursor passed in query string; _meta and other parameters passed in headers
+4. GetPromptRequest.params, including _meta, sent in headers.
+5. URI of ReadResourceRequest.params sent in the path -- must be URL encoded. Remaining parameters, including _meta, sent in headers.
+6. Response **SHOULD** include ETag to support caching of content
+7. The response includes an "Mcp-Request-Id" header with a globally unique identifier for the request.
+8. The request includes an "Mcp-Request-Id" header with the same value as the corresponding server-to-client request.
 
 ### HTTP Paths
 
@@ -107,35 +139,43 @@ Content-Type: application/json
 
 ### Sending Messages from Server to Client
 
-The server sends requests and notifications to the client in the response to HTTP GET requests issued to the "/requests" and "/notifications" endpoints, respectively.
+The server sends requests to the client, one at a time, in the response to an HTTP POST to "/requests".
+The server sends notifications to the client, in batches, in the response to an HTTP GET to "/notifications".
 
-1. The server **MUST** implement a GET method on the "/requests" and "/notifications" endpoints to
+1. The server **MUST** implement a POST method on the "/requests" endpoint and a GET on the "/notifications" endpoint to
 send requests and notifications to the client.
-2. The response of the GET on "/requests" **MUST** be a 200 with a "ServerRequest" body or 204: NoContent.
+2. The request body of the POST on "/requests" **MUST** be empty. The server **MUST** fail a POST to "/requests" with a 400 Bad Request error if the body is not empty.
+2. The response of the POST on "/requests" **MUST** be a 200 with a "ServerRequest" body or 204: NoContent.
 A 200 response also must include an Mcp-Request-Id response header with a globally unique identifier for the request.
 3. The response body of the GET on "/notifications" **MUST** be an array of "ServerNotification" messages (which may be empty).
-4. The response to a GET on "/requests" or "/notifications":
+4. The response to a POST on "/requests" or GET on "/notifications":
   - **MUST** have "Content-Type" of `application/json`
   - **MUST** include the `MCP-Protocol-Version: <protocol-version>` header to specify the protocol version of the message and any response to the message.
 
-#### The "/requests" endpoint
+#### Sending Requests from Sever to Client
 
-When the server wishes to send a request to the client, it should add it to a collection of server-to-client requests and mark it "active". When the client issues a GET request to "/requests", the server should respond with the "oldest" "active" messages and then mark this message as "pending". This will prevent the same message from being immediately redelivered to the client on a subsequent GET to "/requests". When the server receives a response from the client to a pending request, it should be marked "complete" and its resources released.
+When the server wishes to send a request to the client, it should add it to a collection of server-to-client requests and mark it "active". When the client issues a POST request to "/requests", the server should respond with the "oldest" "active" messages and then mark this message as "pending". This will prevent the same message from being immediately redelivered to the client on a subsequent POST to "/requests". When the server receives a response from the client to a pending request, it should be marked "complete" and its resources released. This design allows the client to receive and process multiple outstanding server-to-client requests concurrently.
 
 Periodically the server should mark requests that have been "pending" for longer than some timeout period as "active" so that the request is redelivered to the client. Clients should implement logic to avoid duplicate processing of a retried request.
 
+Responses to a server-to-client request **MUST** be sent in the body of a POST to the "/responses" endpoint. The response body **MUST** contain a JSON object that conforms to the appropriate variant of the `ClientResult` schema. The POST to "/responses" **MUST** include an "Mcp-Request-Id" header with the same value as the "Mcp-Request-Id" header in the corresponding server-to-client request. It must also include an "Mcp-Protocol-Version" header with the protocol version of the response.
+
 Servers **SHOULD** implement a configurable limit on the number of "active" and "pending" requests that can be queued for delivery to the client. If this limit is reached, the server **MUST** reject new requests from being added to the queue with an appropriate error message. In addition, servers **MAY** implement a configurable policy for discarding old "active" requests to make room for new requests.
 
-#### The "/notifications" endpoint
+#### Sending Notifications from Server to Client
 
-Because a GET method cannot alter the state of the server, a mechanism is needed for managing the lifecycle of notifications
-from the server to the client. This is done by tracking groups of notification messages returned by a GET request to "/notifications" and allowing the client to acknowledge these messages on a subsequent POST to "/notifications".
+Notifications are sent from the server to the client in response to a GET request to the "/notifications" endpoint. Notifications are batched together and sent in the response body as an array of "ServerNotification" messages. If there are no notifications to send, the server **MUST** respond with an empty array.
 
-1. Each response to a GET request on "/notifications" **SHOULD** include an "Mcp-Message-Group" header with a globally unique value.
+The Pure HTTP Transport requires acknowledgement of notifications:
+
+1. Each response to a GET request on "/notifications" **MUST** include an "Mcp-Message-Group" header with a globally unique value.
 This header **MAY** be omitted if the GET returns an empty array.
-2. When receiving the response of a GET request on "/notifications" that contains an "Mcp-Message-Group" header, the client **SHOULD** send a POST to the server's "/notifications" endpoint with an "Mcp-Message-Group" request header with the same value when all the notifications in the group have been delivered to the MCP Host.
+2. When receiving the response of a GET request on "/notifications" that contains an "Mcp-Message-Group" header, the client **MUST** send a POST to the server's "/notifications" endpoint with an "Mcp-Message-Group" request header with the same value when all the notifications in the group have been delivered to the MCP Host.
+  - When the server receives this POST, it **SHOULD** release any resources associated with the acknowledged notifications.
   - A POST to "/notifications" with a "Mcp-Message-Group" request header may also contain notifications to be delivered to
     the server in the request body.
+
+The GET request to "/notifications" continues to return the same group of notifications until they are acknowledged by the client. Notifications that the server queues for delivery after sending a group of notifications to the client will be held until the client acknowledges the previous group.
 
 ### Initialization
 
