@@ -387,7 +387,7 @@
       }
     },
     "/requests": {
-      "get": {
+      "post": {
         "tags": [
           "Requests"
         ],
@@ -426,7 +426,9 @@
             ]
           }
         ]
-      },
+      }
+    },
+    "/responses": {
       "post": {
         "tags": [
           "Requests"

@@ -73,10 +73,10 @@ public static class RequestsEndpoints
 
     public static IEndpointRouteBuilder MapRequestsEndpoints(this IEndpointRouteBuilder app)
     {
-        var requests = app.MapGroup("/requests").WithTags("Requests");
+        var requests = app.MapGroup("/").WithTags("Requests");
         requests.AddEndpointFilter<ProtocolVersionFilter>();
 
-        requests.MapGet("/", Results<Ok<IServerRequest>, NoContent> (HttpResponse response) =>
+        requests.MapPost("/requests", Results<Ok<IServerRequest>, NoContent> (HttpResponse response) =>
         {
             // Dequeue until we find an active request
             while (_requestQueue.TryDequeue(out var entry))
@@ -103,7 +103,7 @@ public static class RequestsEndpoints
         .WithDescription("Get server-initiated requests (one at a time)");
 
         // Client responses to server requests
-        requests.MapPost("/", Results<Accepted, BadRequest<ProblemDetails>> (
+        requests.MapPost("/responses", Results<Accepted, BadRequest<ProblemDetails>> (
             [Description("The ID of the request being responded to.")]
             [FromHeader(Name = PureHttpTransport.McpRequestIdHeader)] string requestId,
 
