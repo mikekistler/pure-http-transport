@@ -94,15 +94,14 @@ public class McpClient
     {
         try
         {
+            var requestId = Guid.NewGuid().ToString();
             var requestParams = new CallToolRequestParams
             {
                 Name = toolName,
                 Arguments = arguments
             };
-
             var json = JsonSerializer.Serialize(requestParams, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var requestId = Guid.NewGuid().ToString();
             var request = new HttpRequestMessage(HttpMethod.Post, $"tools/{toolName}/calls")
             {
                 Content = content
@@ -110,7 +109,6 @@ public class McpClient
             // put the requestId in the Mcp-Request-ID header
             request.Headers.Add(PureHttpTransport.PureHttpTransport.McpRequestIdHeader, requestId);
             var response = await _httpClient.SendAsync(request);
-
             if (response.StatusCode != System.Net.HttpStatusCode.Accepted)
             {
                 response.EnsureSuccessStatusCode();
@@ -123,7 +121,6 @@ public class McpClient
 
             // Create a PendingToolCall object and add it to the BackgroundToolCallPoller
             return await BackgroundPoller.PollPendingToolCallAsync(pollUri);
-
         }
         catch (HttpRequestException ex)
         {
@@ -283,7 +280,7 @@ public class McpClient
         {
             var json = JsonSerializer.Serialize(result, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Post, "requests")
+            var request = new HttpRequestMessage(HttpMethod.Post, "responses")
             {
                 Content = content
             };

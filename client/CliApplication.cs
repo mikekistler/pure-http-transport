@@ -214,35 +214,49 @@ public class CliApplication
             var task = kvp.Value;
             if (task.IsCompleted)
             {
-                var result = task.Result;
                 Console.WriteLine($"\nTool call (Key: {key}) completed:");
-                if (result != null)
+                try
                 {
-                    if (result.IsError == true)
+                    var result = task.Result;
+                    if (result != null)
                     {
-                        Console.WriteLine("❌ Tool call failed:");
-                    }
-                    else
-                    {
-                        Console.WriteLine("✅ Tool call successful:");
-                    }
-
-                    if (result.Content != null)
-                    {
-                        foreach (var content in result.Content)
+                        if (result.IsError == true)
                         {
-                            if (content is TextContentBlock textContent)
+                            Console.WriteLine("❌ Tool call failed:");
+                        }
+                        else
+                        {
+                            Console.WriteLine("✅ Tool call successful:");
+                        }
+
+                        if (result.Content != null)
+                        {
+                            foreach (var content in result.Content)
                             {
-                                Console.WriteLine(textContent.Text);
+                                if (content is TextContentBlock textContent)
+                                {
+                                    Console.WriteLine(textContent.Text);
+                                }
                             }
                         }
-                    }
 
-                    if (result.StructuredContent != null)
-                    {
-                        Console.WriteLine("\nStructured content:");
-                        Console.WriteLine(result.StructuredContent.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                        if (result.StructuredContent != null)
+                        {
+                            Console.WriteLine("\nStructured content:");
+                            Console.WriteLine(result.StructuredContent.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                        }
                     }
+                }
+                catch (AggregateException aggEx)
+                {
+                    foreach (var ex in aggEx.InnerExceptions)
+                    {
+                        Console.WriteLine($"❌ Tool call threw exception: {ex.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Tool call threw exception: {ex.Message}");
                 }
                 completed.Add(key);
             }

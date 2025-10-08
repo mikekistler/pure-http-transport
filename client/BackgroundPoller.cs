@@ -50,15 +50,15 @@ public class BackgroundPoller : IDisposable
                 // Poll /requests endpoint
                 try
                 {
-                    var reqResponse = await _mcpClient.HttpClient.GetAsync("requests", _cts.Token);
+                    var response = await _mcpClient.HttpClient.PostAsync("requests", null, _cts.Token);
 
-                    if (reqResponse.IsSuccessStatusCode && reqResponse.Content.Headers.ContentLength > 0)
+                    if (response.IsSuccessStatusCode && response.Content.Headers.ContentLength > 0)
                     {
                         string? requestId = null;
                         IServerRequest? serverRequest = null;
 
                         // Try to get requestId from header or content
-                        if (reqResponse.Headers.TryGetValues(PureHttpTransport.PureHttpTransport.McpRequestIdHeader, out var ids))
+                        if (response.Headers.TryGetValues(PureHttpTransport.PureHttpTransport.McpRequestIdHeader, out var ids))
                         {
                             requestId = ids.FirstOrDefault();
                         }
@@ -70,7 +70,7 @@ public class BackgroundPoller : IDisposable
                             continue;
                         }
 
-                        var reqContent = await reqResponse.Content.ReadAsStringAsync();
+                        var reqContent = await response.Content.ReadAsStringAsync();
                         // Deserialize to ServerRequest or its concrete subclass
                         serverRequest = JsonSerializer.Deserialize<IServerRequest>(reqContent, serializerOptions);
 
